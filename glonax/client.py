@@ -117,7 +117,7 @@ class GlonaxStreamReader:
         self.reader = reader
 
     async def read(self) -> tuple[MessageType, bytes]:
-        header = await self.reader.read(10)
+        header = await self.reader.readexactly(10)
 
         if header[:3] != b"LXR":
             print("Invalid header received")  # TODO: Replace with exception
@@ -134,7 +134,7 @@ class GlonaxStreamReader:
             print("Invalid header padding")  # TODO: Replace with exception
             return
 
-        message = await self.reader.read(message_length)
+        message = await self.reader.readexactly(message_length)
 
         if len(message) != message_length:
             print("Invalid message length")  # TODO: Replace with exception
