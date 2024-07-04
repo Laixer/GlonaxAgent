@@ -198,9 +198,6 @@ async def glonax_reader(
         except Exception as e:
             logger.error(f"Error: {e}")
 
-    # MOVE
-    await session.close()
-
 
 async def websocket_reader(
     session: Session, websocket: websockets.WebSocketClientProtocol
@@ -250,26 +247,25 @@ async def main():
     try:
         reader, writer = await gclient.open_unix_connection()
 
-        # TODO: Session should be a context manager
-        s = Session(reader, writer)
-        await s.handshake()
+        async with Session(reader, writer) as session:
+            await session.handshake()
 
-        # TODO: Open GPS connection
+            # TODO: Open GPS connection
 
-        uri = f"wss://edge.laixer.equipment/api/78adc7fc-6f60-4fc7-81ed-91396892f4a1/ws"
-        w = await websockets.connect(uri)
+            uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
+            w = await websockets.connect(uri)
 
-        logger.info(f"Instance ID: {s.instance.id}")
-        logger.info(f"Instance model: {s.instance.model}")
-        logger.info(f"Instance type: {s.instance.machine_type}")
-        logger.info(f"Instance version: {s.instance.version_string}")
-        logger.info(f"Instance serial number: {s.instance.serial_number}")
+            logger.info(f"Instance ID: {session.instance.id}")
+            logger.info(f"Instance model: {session.instance.model}")
+            logger.info(f"Instance type: {session.instance.machine_type}")
+            logger.info(f"Instance version: {session.instance.version_string}")
+            logger.info(f"Instance serial number: {session.instance.serial_number}")
 
-        async with asyncio.TaskGroup() as tg:
-            task1 = tg.create_task(glonax_reader(s, w))
-            task2 = tg.create_task(websocket_reader(s, w))
-            task3 = tg.create_task(update_host(s.instance))
-            task4 = tg.create_task(update_telemetry(s.instance))
+            async with asyncio.TaskGroup() as tg:
+                task1 = tg.create_task(glonax_reader(session, w))
+                task2 = tg.create_task(websocket_reader(session, w))
+                task3 = tg.create_task(update_host(session.instance))
+                task4 = tg.create_task(update_telemetry(session.instance))
     except asyncio.CancelledError:
         pass
 

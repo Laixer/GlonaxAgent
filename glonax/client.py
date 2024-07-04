@@ -189,6 +189,12 @@ class Session:
         self.writer.writer.close()
         await self.writer.writer.wait_closed()
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.close()
+
     # async def ping(self) -> float:
     #     """
     #     Sends an echo message to the server and measures the elapsed time for the response.
