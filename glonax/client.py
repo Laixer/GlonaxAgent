@@ -166,10 +166,13 @@ async def open_tcp_connection(
 async def open_unix_connection(
     path: str = "/tmp/glonax.sock",
 ) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
-    reader, writer = await asyncio.open_unix_connection(path)
-    reader = GlonaxStreamReader(reader)
-    writer = GlonaxStreamWriter(writer)
-    return reader, writer
+    try:
+        reader, writer = await asyncio.open_unix_connection(path)
+        reader = GlonaxStreamReader(reader)
+        writer = GlonaxStreamWriter(writer)
+        return reader, writer
+    except FileNotFoundError as e:
+        raise ConnectionError(f"Connection error: {e}")
 
 
 class Session:
