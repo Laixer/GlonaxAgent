@@ -263,7 +263,10 @@ async def main():
                 task3 = tg.create_task(update_host(session.instance))
                 task4 = tg.create_task(update_telemetry(session.instance))
     except asyncio.CancelledError:
-        pass
+        logger.info("Agent is gracefully shutting down")
+    except ConnectionError as e:
+        # TODO: Reconnect
+        logger.error(f"Connection error: {e}")
 
 
 if __name__ == "__main__":
