@@ -168,7 +168,7 @@ async def glonax_reader(
             message_type, message = await session.reader.read()
             if message_type == MessageType.STATUS:
                 status = ModuleStatus.from_bytes(message)
-                # print(f"Status: {status}")
+                logger.info(f"Status: {status}")
 
                 # message = ChannelMessage(
                 #     type="signal", topic="status", data=status.model_dump()
@@ -178,7 +178,7 @@ async def glonax_reader(
 
             elif message_type == MessageType.ENGINE:
                 engine = Engine.from_bytes(message)
-                # print(f"Engine: {engine}")
+                logger.info(f"Engine: {engine}")
 
                 message = ChannelMessage(
                     type="signal", topic="engine", data=engine.model_dump()
@@ -190,6 +190,10 @@ async def glonax_reader(
 
         except asyncio.CancelledError:
             logger.info("glonax reader cancelled")
+            break
+        except asyncio.IncompleteReadError as e:
+            # TODO: Reconnect
+            logger.info("Connection closed")
             break
         except Exception as e:
             logger.error(f"Error: {e}")
@@ -213,13 +217,13 @@ async def websocket_reader(
 
             if message.type == "command" and message.topic == "control":
                 control = Control(**message.data)
-                print("Control:", control)
+                logger.info("Control:", control)
 
                 await session.writer.control(control)
 
             elif message.type == "command" and message.topic == "engine":
                 engine = Engine(**message.data)
-                print("Engine:", engine)
+                logger.info("Engine:", engine)
 
                 await session.writer.engine(engine)
 
