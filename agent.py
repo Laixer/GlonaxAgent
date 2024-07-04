@@ -12,7 +12,6 @@ import websockets
 
 from glonax import client as gclient
 from glonax.client import MessageType, Session
-from glonax.service import ServiceBase
 from glonax.message import Control, Engine, ModuleStatus
 from pydantic import ValidationError
 
@@ -25,34 +24,34 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 
-class ForwardService(ServiceBase):
-    global is_connected
+# class ForwardService(ServiceBase):
+#     global is_connected
 
-    # TODO: Wrap this up in a class
-    status_map = {}
-    status_map_last_update = {}
-    # gnss_last: Gnss | None = None
-    # gnss_last_update = time.time()
-    engine_last: Engine | None = None
-    engine_last_update = time.time()
+#     # TODO: Wrap this up in a class
+#     status_map = {}
+#     status_map_last_update = {}
+#     # gnss_last: Gnss | None = None
+#     # gnss_last_update = time.time()
+#     engine_last: Engine | None = None
+#     engine_last_update = time.time()
 
-    def on_status(self, status: ModuleStatus):
-        val = self.status_map.get(status.name)
-        last_update = self.status_map_last_update.get(status.name, 0)
-        last_update_elapsed = time.time() - last_update
-        if val is None or val != status or last_update_elapsed > 15:
-            logger.info(f"Status: {status}")
+#     def on_status(self, status: ModuleStatus):
+#         val = self.status_map.get(status.name)
+#         last_update = self.status_map_last_update.get(status.name, 0)
+#         last_update_elapsed = time.time() - last_update
+#         if val is None or val != status or last_update_elapsed > 15:
+#             logger.info(f"Status: {status}")
 
-            message = ChannelMessage(
-                type="signal", topic="status", data=status.model_dump()
-            )
+#             message = ChannelMessage(
+#                 type="signal", topic="status", data=status.model_dump()
+#             )
 
-            if is_connected and ws:
-                # TODO: Only send if the connection is open
-                ws.send(message.model_dump_json())
+#             if is_connected and ws:
+#                 # TODO: Only send if the connection is open
+#                 ws.send(message.model_dump_json())
 
-            self.status_map[status.name] = status
-            self.status_map_last_update[status.name] = time.time()
+#             self.status_map[status.name] = status
+#             self.status_map_last_update[status.name] = time.time()
 
     # def on_gnss(self, client: gclient.GlonaxClient, gnss: Gnss):
     #     gnss_last_update_elapsed = time.time() - self.gnss_last_update
@@ -70,20 +69,20 @@ class ForwardService(ServiceBase):
     #         self.gnss_last = gnss
     #         self.gnss_last_update = time.time()
 
-    def on_engine(self, engine: Engine):
-        engine_last_update_elapsed = time.time() - self.engine_last_update
-        if self.engine_last != engine or engine_last_update_elapsed > 15:
-            logger.info(f"Engine: {engine}")
-            message = ChannelMessage(
-                type="signal", topic="engine", data=engine.model_dump()
-            )
+    # def on_engine(self, engine: Engine):
+    #     engine_last_update_elapsed = time.time() - self.engine_last_update
+    #     if self.engine_last != engine or engine_last_update_elapsed > 15:
+    #         logger.info(f"Engine: {engine}")
+    #         message = ChannelMessage(
+    #             type="signal", topic="engine", data=engine.model_dump()
+    #         )
 
-            if is_connected and ws:
-                # TODO: Only send if the connection is open
-                ws.send(message.model_dump_json())
+    #         if is_connected and ws:
+    #             # TODO: Only send if the connection is open
+    #             ws.send(message.model_dump_json())
 
-            self.engine_last = engine
-            self.engine_last_update = time.time()
+    #         self.engine_last = engine
+    #         self.engine_last_update = time.time()
 
 
 async def update_host(instance: gclient.Instance):
