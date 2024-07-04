@@ -172,7 +172,6 @@ async def open_unix_connection(
     return reader, writer
 
 
-# TODO: Add context manager to close the connection
 class Session:
     def __init__(
         self,
@@ -193,6 +192,17 @@ class Session:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
+        """
+        Clean up resources and close the client connection.
+
+        Args:
+            exc_type (type): The type of the exception raised, if any.
+            exc_value (Exception): The exception raised, if any.
+            traceback (traceback): The traceback object associated with the exception.
+
+        Returns:
+            None
+        """
         await self.close()
 
     # async def ping(self) -> float:

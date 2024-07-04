@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import subprocess
+import os
 import time
 import logging
 import configparser
@@ -87,15 +87,12 @@ class ForwardService(ServiceBase):
 
 
 async def update_host(instance: gclient.Instance):
-    hostname = subprocess.check_output(["hostname"]).decode().strip()
-    kernel = subprocess.check_output(["uname", "-r"]).decode().strip()
-
     host_config = HostConfig(
-        hostname=hostname,
-        kernel=kernel,
-        model="test",
+        hostname=os.uname().nodename,
+        kernel=os.uname().release,
+        model=instance.model,
         version=378,
-        serial_number="test",
+        serial_number=instance.serial_number,
     )
     data = host_config.model_dump()
 

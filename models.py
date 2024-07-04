@@ -25,5 +25,5 @@ class HostConfig(BaseModel):
     # memory_total: int # TODO: Add this field
     # cpu_count: int # TODO: Add this field
     model: str
-    version: int
+    version: int  # TODO: Change this to a string
     serial_number: str
