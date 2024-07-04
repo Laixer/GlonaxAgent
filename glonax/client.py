@@ -205,31 +205,6 @@ class Session:
         """
         await self.close()
 
-    # async def ping(self) -> float:
-    #     """
-    #     Sends an echo message to the server and measures the elapsed time for the response.
-
-    #     Returns:
-    #         float: The elapsed time in milliseconds.
-    #     """
-    #     snd_echo = EchoFrame()
-    #     start_time = time.time()
-    #     await self.writer.write(MessageType.ECHO, snd_echo.to_bytes())
-
-    #     # TODO: Ask the reader to block until ECHO response is received
-    #     message_type, message = await self.reader.read()
-    #     end_time = time.time()
-    #     if message_type == MessageType.ECHO:
-    #         rcv_echo = EchoFrame.from_bytes(message)
-    #         if snd_echo != rcv_echo:
-    #             print(
-    #                 "Invalid echo response from server"
-    #             )  # TODO: Replace with exception
-
-    #     elapsed_time = end_time - start_time
-    #     logger.debug(f"Ping: {elapsed_time:.2f} seconds")
-    #     return elapsed_time
-
     async def handshake(self):
         """
         Performs the handshake process with the Glonax server.
