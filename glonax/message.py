@@ -1,5 +1,5 @@
 import struct
-from enum import IntEnum
+from enum import Enum, IntEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -175,3 +175,16 @@ class Engine(BaseModel):
 #             + struct.pack("fff", self.altitude, self.speed, self.heading)
 #             + struct.pack("B", self.satellites)
 #         )
+
+
+class ChannelMessageType(str, Enum):
+    COMMAND = "command"
+    SIGNAL = "signal"
+    CONTROL = "control"
+    ERROR = "error"
+
+
+class Message(BaseModel):
+    type: ChannelMessageType
+    topic: str
+    payload: Control | Instance | ModuleStatus | Engine

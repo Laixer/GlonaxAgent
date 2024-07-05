@@ -2,12 +2,6 @@ import datetime
 from pydantic import BaseModel
 
 
-class ChannelMessage(BaseModel):
-    type: str
-    topic: str
-    data: dict | None = None
-
-
 class Telemetry(BaseModel):
     memory_used: float
     disk_used: float

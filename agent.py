@@ -11,11 +11,11 @@ import asyncio
 import websockets
 
 from glonax import client as gclient
-from glonax.client import MessageType, Session
-from glonax.message import Control, Engine, ModuleStatus
+from glonax.client import Session
+from glonax.message import Message, ChannelMessageType
 from pydantic import ValidationError
 
-from models import ChannelMessage, HostConfig, Telemetry
+from models import HostConfig, Telemetry
 
 
 logging.basicConfig(level=logging.INFO)
@@ -92,7 +92,7 @@ INSTANCE: gclient.Instance | None = None
 instance_event = asyncio.Event()
 
 
-async def glonax(signal_channel: Channel[str], command_channel: Channel[str]):
+async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
     while True:
@@ -112,62 +112,25 @@ async def glonax(signal_channel: Channel[str], command_channel: Channel[str]):
                 instance_event.set()
 
                 async def read_command_channel():
-                    async for item in command_channel:
-                        print("Command:", item)
+                    async for message in command_channel:
+                        print("Command:", message)
 
-                        try:
-                            data = json.loads(item)
-                            message = ChannelMessage(**data)
-
-                            if message.type == "command" and message.topic == "control":
-                                control = Control(**message.data)
-                                print("Control OUT:", control)
-
-                                await session.writer.control(control)
-
-                            elif (
-                                message.type == "command" and message.topic == "engine"
-                            ):
-                                engine = Engine(**message.data)
-                                print("Engine OUT:", engine)
-
-                                await session.writer.engine(engine)
-                        except json.JSONDecodeError:
-                            print("Received raw message:", item)
-                        except ValidationError as e:
-                            print("Validation error:", e)
+                        if message.topic == "control":
+                            await session.writer.control(message.payload)
+                        elif message.topic == "engine":
+                            await session.writer.engine(message.payload)
 
                 async def read_session():
                     while True:
                         try:
-                            message_type, message = await session.reader.read()
-                            if message_type == MessageType.STATUS:
-                                status = ModuleStatus.from_bytes(message)
-                                logger.info(f"Status: {status}")
-
-                                message = ChannelMessage(
-                                    type="signal", topic="status", data=status.model_dump()
-                                )
-                                signal_channel.put_nowait(message.model_dump_json())
-
-                            elif message_type == MessageType.ENGINE:
-                                engine = Engine.from_bytes(message)
-                                logger.info(f"Engine: {engine}")
-
-                                message = ChannelMessage(
-                                    type="signal", topic="engine", data=engine.model_dump()
-                                )
-                                signal_channel.put_nowait(message.model_dump_json())
-
-                            else:
-                                logger.warning(
-                                    f"glonax unknown message type: {message_type}"
-                                )
+                            message = await session.recv_message()
+                            if message is not None:
+                                signal_channel.put_nowait(message)
 
                         except ChannelFull:
-                            logger.warning("glonax channel is full")
+                            logger.warning("glonax signal channel is full")
                         except asyncio.IncompleteReadError as e:
-                            logger.info("glonax reader disconnected")
+                            logger.info("glonax disconnected")
                             break
 
                 await asyncio.gather(read_command_channel(), read_session())
@@ -183,7 +146,9 @@ async def glonax(signal_channel: Channel[str], command_channel: Channel[str]):
             await asyncio.sleep(1)
 
 
-async def websocket(signal_channel: Channel[str], command_channel: Channel[str]):
+async def websocket(
+    signal_channel: Channel[Message], command_channel: Channel[Message]
+):
     global INSTANCE, instance_event
 
     await instance_event.wait()
@@ -194,12 +159,11 @@ async def websocket(signal_channel: Channel[str], command_channel: Channel[str])
     uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
     async with websockets.connect(uri) as websocket:
 
-        message = ChannelMessage(type="signal", topic="boot")
-        await websocket.send(message.model_dump_json())
-
         async def read_signal_channel():
             async for item in signal_channel:
-                await websocket.send(item)
+                # await websocket.send(item.model_dump_json())
+                # print("Sent:", item.model_dump_json())
+                pass
 
         async def read_socket():
             while True:
@@ -207,25 +171,9 @@ async def websocket(signal_channel: Channel[str], command_channel: Channel[str])
                     message = await websocket.recv()
                     data = json.loads(message)
 
-                    msg = ChannelMessage(**data)
-
-                    if msg.type == "command":
-                        command_channel.put_nowait(msg.model_dump_json())
-
-                    if msg.type == "command" and msg.topic == "control":
-                        control = Control(**msg.data)
-                        print("Control IN:", control)
-                        # logger.info("Control:", msg.data)
-
-                    #     # await session.writer.control(control)
-                    #     command_channel.put_nowait(message.model_dump_json())
-
-                    # elif message.type == "command" and message.topic == "engine":
-                    #     engine = Engine(**message.data)
-                    #     logger.info("Engine:", engine)
-
-                    #     # await session.writer.engine(engine)
-                    #     command_channel.put_nowait(message.model_dump_json())
+                    message = Message(**data)
+                    if message.type == ChannelMessageType.COMMAND:
+                        command_channel.put_nowait(message)
 
                 except json.JSONDecodeError:
                     print("Received raw message:", message)

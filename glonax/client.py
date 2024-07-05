@@ -90,7 +90,15 @@ class SessionFrame(Packet):
 
 
 from glonax import DEFAULT_USER_AGENT
-from glonax.message import Control, ControlType, Instance, Engine
+from glonax.message import (
+    ChannelMessageType,
+    Control,
+    ControlType,
+    Instance,
+    Engine,
+    Message,
+    ModuleStatus,
+)
 
 
 class GlonaxStreamWriter:
@@ -141,17 +149,6 @@ class GlonaxStreamReader:
             return
 
         return message_type, message
-
-
-APPLICATION_TYPES = [
-    MessageType.STATUS,
-    MessageType.MOTION,
-    # MessageType.GNSS,
-    MessageType.ENGINE,
-    MessageType.TARGET,
-    MessageType.CONTROL,
-    MessageType.ROTATOR,
-]
 
 
 async def open_tcp_connection(
@@ -226,6 +223,41 @@ class Session:
         if message_type == MessageType.INSTANCE:
             self.instance = Instance.from_bytes(message)
             logger.debug(f"Instance ID: {self.instance}")
+
+    async def recv_message(self) -> Message | None:
+        message_type, message = await self.reader.read()
+        if message_type == MessageType.INSTANCE:
+            instance = Instance.from_bytes(message)
+
+            message = Message(
+                type=ChannelMessageType.SIGNAL,
+                topic="instance",
+                payload=instance,
+            )
+            return message
+
+        if message_type == MessageType.STATUS:
+            status = ModuleStatus.from_bytes(message)
+
+            message = Message(
+                type=ChannelMessageType.SIGNAL,
+                topic="status",
+                payload=status,
+            )
+            return message
+
+        elif message_type == MessageType.ENGINE:
+            engine = Engine.from_bytes(message)
+
+            message = Message(
+                type=ChannelMessageType.SIGNAL,
+                topic="engine",
+                data=engine,
+            )
+            return message
+        else:
+            # TODO: Why not raise an exception here?
+            return None
 
     async def machine_horn(self, value: bool):
         """
