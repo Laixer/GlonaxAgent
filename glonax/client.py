@@ -252,7 +252,7 @@ class Session:
             message = Message(
                 type=ChannelMessageType.SIGNAL,
                 topic="engine",
-                data=engine,
+                payload=engine,
             )
             return message
         else:
