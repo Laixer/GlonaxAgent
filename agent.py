@@ -220,6 +220,8 @@ async def update_host():
                 logger.error(f"HTTP error: {e}")
             except httpx.ConnectError as e:
                 logger.error(f"Connection error: {e}")
+            except httpx.ConnectTimeout as e:
+                logger.error(f"Connection timeout: {e}")
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
             finally:
@@ -262,6 +264,8 @@ async def update_telemetry():
                 logger.error(f"HTTP error: {e}")
             except httpx.ConnectError as e:
                 logger.error(f"Connection error: {e}")
+            except httpx.ConnectTimeout as e:
+                logger.error(f"Connection timeout: {e}")
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
 
