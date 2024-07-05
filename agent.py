@@ -85,26 +85,158 @@ logger = logging.getLogger()
 #         self.engine_last_update = time.time()
 
 
-async def update_host(instance: gclient.Instance):
-    host_config = HostConfig(
-        hostname=os.uname().nodename,
-        kernel=os.uname().release,
-        model=instance.model,
-        version=378,
-        serial_number=instance.serial_number,
-    )
-    data = host_config.model_dump()
+from aiochannel import Channel, ChannelClosed, ChannelFull
+
+INSTANCE: gclient.Instance | None = None
+
+instance_event = asyncio.Event()
+
+
+async def glonax(channel: Channel[str]):
+    global INSTANCE, instance_event
+
+    while True:
+        try:
+            reader, writer = await gclient.open_unix_connection()
+
+            async with Session(reader, writer) as session:
+                await session.handshake()
+
+                logger.info(f"Instance ID: {session.instance.id}")
+                logger.info(f"Instance model: {session.instance.model}")
+                logger.info(f"Instance type: {session.instance.machine_type}")
+                logger.info(f"Instance version: {session.instance.version_string}")
+                logger.info(f"Instance serial number: {session.instance.serial_number}")
+
+                INSTANCE = session.instance
+                instance_event.set()
+
+                while True:
+                    try:
+                        message_type, message = await session.reader.read()
+                        if message_type == MessageType.STATUS:
+                            status = ModuleStatus.from_bytes(message)
+                            logger.info(f"Status: {status}")
+
+                            message = ChannelMessage(
+                                type="signal", topic="status", data=status.model_dump()
+                            )
+
+                            # await websocket.send(message.model_dump_json())
+
+                            # TODO: Handle ChannelClosed
+                            # TODO: Just continue if the queue is full
+                            # await channel.put(message.model_dump_json())
+                            channel.put_nowait(message.model_dump_json())
+
+                        elif message_type == MessageType.ENGINE:
+                            engine = Engine.from_bytes(message)
+                            logger.info(f"Engine: {engine}")
+
+                            # message = ChannelMessage(
+                            #     type="signal", topic="engine", data=engine.model_dump()
+                            # )
+                            # await websocket.send(message.model_dump_json())
+
+                        else:
+                            logger.warning(f"Unknown message type: {message_type}")
+
+                    except ChannelFull:
+                        logger.warning("Channel is full")
+                    except asyncio.IncompleteReadError as e:
+                        logger.info("Connection closed")
+                        break
+
+        except asyncio.CancelledError:
+            logger.info("glonax task cancelled")
+            return
+        except ChannelClosed:
+            logger.error("Channel is closed")
+            return
+        except ConnectionError as e:
+            logger.error(f"Connection error: {e}")
+            await asyncio.sleep(1)
+
+
+async def websocket(channel: Channel[str]):
+    global INSTANCE, instance_event
+
+    await instance_event.wait()
+
+    logger.info("Starting websocket task")
+
+    uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
+    async with websockets.connect(uri) as websocket:
+
+        message = ChannelMessage(type="signal", topic="boot")
+        await websocket.send(message.model_dump_json())
+
+        async def read_channel():
+            async for item in channel:
+                logger.info(f"Received: {item}")
+                await websocket.send(item)
+
+        async def read_socket():
+            while True:
+                try:
+                    message = await websocket.recv()
+                    data = json.loads(message)  # Assuming JSON messages
+
+                    message = ChannelMessage(**data)
+
+                    if message.type == "command" and message.topic == "control":
+                        control = Control(**message.data)
+                        logger.info("Control:", control)
+
+                        # await session.writer.control(control)
+
+                    elif message.type == "command" and message.topic == "engine":
+                        engine = Engine(**message.data)
+                        logger.info("Engine:", engine)
+
+                        # await session.writer.engine(engine)
+
+                except json.JSONDecodeError:
+                    print("Received raw message:", message)
+                except ValidationError as e:
+                    print("Validation error:", e)
+
+                except asyncio.CancelledError:
+                    logger.info("websocket reader cancelled")
+                    break
+                except websockets.exceptions.ConnectionClosedError:
+                    # TODO: Reconnect
+                    logger.info("Connection closed")
+                    break
+                except Exception as e:
+                    logger.error(f"Error: {e}")
+
+        await asyncio.gather(read_channel(), read_socket())
+
+
+async def update_host():
+    global INSTANCE, instance_event
+
+    await instance_event.wait()
 
     headers = {"Authorization": "Bearer ABC@123"}
 
-    async with httpx.AsyncClient(http2=True) as client:
+    base_url = f"https://edge.laixer.equipment/api/{INSTANCE.id}"
+    async with httpx.AsyncClient(
+        http2=True, base_url=base_url, headers=headers
+    ) as client:
         while True:
             try:
-                response = await client.put(
-                    f"https://edge.laixer.equipment/api/{instance.id}/host",
-                    json=data,
-                    headers=headers,
+                host_config = HostConfig(
+                    hostname=os.uname().nodename,
+                    kernel=os.uname().release,
+                    model=INSTANCE.model,
+                    version=378,  # TODO: Get the actual version
+                    serial_number=INSTANCE.serial_number,
                 )
+                data = host_config.model_dump()
+
+                response = await client.put(f"/host", json=data)
                 response.raise_for_status()
 
             except asyncio.CancelledError:
@@ -116,33 +248,35 @@ async def update_host(instance: gclient.Instance):
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
             finally:
-                await asyncio.sleep(60 * 60)
+                await asyncio.sleep(60 * 20)
 
 
-async def update_telemetry(instance: gclient.Instance):
+async def update_telemetry():
+    global INSTANCE, instance_event
+
+    await instance_event.wait()
+
     def seconds_elapsed() -> int:
         return round(time.time() - psutil.boot_time())
 
-    telemetry = Telemetry(
-        memory_used=psutil.virtual_memory().percent,
-        disk_used=psutil.disk_usage("/").percent,
-        cpu_freq=psutil.cpu_freq().current,
-        cpu_load=psutil.getloadavg(),
-        uptime=seconds_elapsed(),
-    )
-    data = telemetry.model_dump()
-
     headers = {"Authorization": "Bearer ABC@123"}
 
-    base_url = f"https://edge.laixer.equipment/api"
+    base_url = f"https://edge.laixer.equipment/api/{INSTANCE.id}"
     async with httpx.AsyncClient(
         http2=True, base_url=base_url, headers=headers
     ) as client:
         while True:
             try:
-                response = await client.post(
-                    f"/{instance.id}/telemetry", json=data, headers=headers
+                telemetry = Telemetry(
+                    memory_used=psutil.virtual_memory().percent,
+                    disk_used=psutil.disk_usage("/").percent,
+                    cpu_freq=psutil.cpu_freq().current,
+                    cpu_load=psutil.getloadavg(),
+                    uptime=seconds_elapsed(),
                 )
+                data = telemetry.model_dump()
+
+                response = await client.post("/telemetry", json=data)
                 response.raise_for_status()
 
             except asyncio.CancelledError:
@@ -157,115 +291,18 @@ async def update_telemetry(instance: gclient.Instance):
             await asyncio.sleep(60)
 
 
-async def glonax_reader(
-    session: Session, websocket: websockets.WebSocketClientProtocol
-):
-    while True:
-        try:
-            message_type, message = await session.reader.read()
-            if message_type == MessageType.STATUS:
-                status = ModuleStatus.from_bytes(message)
-                logger.info(f"Status: {status}")
-
-                # message = ChannelMessage(
-                #     type="signal", topic="status", data=status.model_dump()
-                # )
-
-                # await websocket.send(message.model_dump_json())
-
-            elif message_type == MessageType.ENGINE:
-                engine = Engine.from_bytes(message)
-                logger.info(f"Engine: {engine}")
-
-                message = ChannelMessage(
-                    type="signal", topic="engine", data=engine.model_dump()
-                )
-                await websocket.send(message.model_dump_json())
-
-            else:
-                logger.warning(f"Unknown message type: {message_type}")
-
-        except asyncio.CancelledError:
-            logger.info("glonax reader cancelled")
-            break
-        except asyncio.IncompleteReadError as e:
-            # TODO: Reconnect
-            logger.info("Connection closed")
-            break
-        except Exception as e:
-            logger.error(f"Error: {e}")
-
-
-async def websocket_reader(session: Session):
-    uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
-    async with websockets.connect(uri) as websocket:
-
-        message = ChannelMessage(type="signal", topic="boot")
-        await websocket.send(message.model_dump_json())
-
-        while True:
-            try:
-                message = await websocket.recv()
-                data = json.loads(message)  # Assuming JSON messages
-
-                message = ChannelMessage(**data)
-
-                if message.type == "command" and message.topic == "control":
-                    control = Control(**message.data)
-                    logger.info("Control:", control)
-
-                    await session.writer.control(control)
-
-                elif message.type == "command" and message.topic == "engine":
-                    engine = Engine(**message.data)
-                    logger.info("Engine:", engine)
-
-                    await session.writer.engine(engine)
-
-                # except json.JSONDecodeError:
-                #     print("Received raw message:", message)
-                # except ValidationError as e:
-                #     print("Validation error:", e)
-
-            except asyncio.CancelledError:
-                logger.info("websocket reader cancelled")
-                break
-            except websockets.exceptions.ConnectionClosedError:
-                # TODO: Reconnect
-                logger.info("Connection closed")
-                break
-            except Exception as e:
-                logger.error(f"Error: {e}")
-
-
 async def main():
     try:
-        reader, writer = await gclient.open_unix_connection()
+        async with asyncio.TaskGroup() as tg:
+            signal_channel: Channel[str] = Channel(32)
 
-        async with Session(reader, writer) as session:
-            await session.handshake()
-
-            # TODO: Open GPS connection
-
-            # uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
-            # w = await websockets.connect(uri)
-
-            logger.info(f"Instance ID: {session.instance.id}")
-            logger.info(f"Instance model: {session.instance.model}")
-            logger.info(f"Instance type: {session.instance.machine_type}")
-            logger.info(f"Instance version: {session.instance.version_string}")
-            logger.info(f"Instance serial number: {session.instance.serial_number}")
-
-            async with asyncio.TaskGroup() as tg:
-                task1 = tg.create_task(glonax_reader(session))
-                task2 = tg.create_task(websocket_reader(session, w))
-                task3 = tg.create_task(update_host(session.instance))
-                task4 = tg.create_task(update_telemetry(session.instance))
+            task1 = tg.create_task(glonax(signal_channel))
+            # TODO: Create GPS task here
+            task2 = tg.create_task(websocket(signal_channel))
+            task3 = tg.create_task(update_host())
+            task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
-    except ConnectionError as e:
-        # TODO: Reconnect
-        logger.error(f"Connection error: {e}")
 
 
 if __name__ == "__main__":
