@@ -205,8 +205,10 @@ async def update_host():
                 host_config = HostConfig(
                     hostname=os.uname().nodename,
                     kernel=os.uname().release,
+                    memory_total=psutil.virtual_memory().total,
+                    cpu_count=psutil.cpu_count(),
                     model=INSTANCE.model,
-                    version=378,  # TODO: Get the actual version
+                    version=INSTANCE.version_string,
                     serial_number=INSTANCE.serial_number,
                 )
                 data = host_config.model_dump()
