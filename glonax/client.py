@@ -172,7 +172,7 @@ async def open_unix_connection(
         writer = GlonaxStreamWriter(writer)
         return reader, writer
     except FileNotFoundError as e:
-        raise ConnectionError(f"Connection error: {e}")
+        raise ConnectionError(f"Could not connect to {path}") from e
 
 
 class Session:
