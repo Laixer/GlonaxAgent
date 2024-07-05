@@ -112,21 +112,21 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                                 signal_channel.put_nowait(message)
 
                         except ChannelFull:
-                            logger.warning("glonax signal channel is full")
+                            logger.warning("Glonax signal channel is full")
                         except asyncio.IncompleteReadError as e:
-                            logger.info("glonax disconnected")
+                            logger.info("Glonax disconnected")
                             break
 
                 await asyncio.gather(read_command_channel(), read_session())
 
         except asyncio.CancelledError:
-            logger.info("glonax task cancelled")
+            logger.info("Glonax task cancelled")
             return
         except ChannelClosed:
-            logger.error("glonax channel closed")
+            logger.error("Glonax channel closed")
             return
         except ConnectionError as e:
-            logger.error(f"glonax connection error: {e}")
+            logger.error(f"Glonax connection error: {e}")
             await asyncio.sleep(1)
 
 
@@ -172,19 +172,19 @@ async def websocket(
                 await asyncio.gather(read_signal_channel(), read_socket())
 
         except asyncio.CancelledError:
-            logger.info("websocket reader cancelled")
+            logger.info("Websocket reader cancelled")
             return
         except ChannelClosed:
-            logger.error("websocket channel closed")
+            logger.error("Websocket channel closed")
             return
         except websockets.exceptions.ConnectionClosedError:
-            logger.info("websocket connection closed")
+            logger.info("Websocket connection closed")
             await asyncio.sleep(1)
         except ConnectionResetError:
-            logger.error("websocket connection reset")
+            logger.error("Websocket connection reset")
             await asyncio.sleep(1)
         except ConnectionRefusedError:
-            logger.error("websocket connection refused")
+            logger.error("Websocket connection refused")
             await asyncio.sleep(1)
 
 
@@ -193,7 +193,8 @@ async def update_host():
 
     await instance_event.wait()
 
-    headers = {"Authorization": "Bearer ABC@123"}
+    server_authkey = config["server"]["authkey"]
+    headers = {"Authorization": "Bearer " + server_authkey}
 
     base_url = config["server"]["base_url"]
     async with httpx.AsyncClient(
@@ -233,7 +234,8 @@ async def update_telemetry():
     def seconds_elapsed() -> int:
         return round(time.time() - psutil.boot_time())
 
-    headers = {"Authorization": "Bearer ABC@123"}
+    server_authkey = config["server"]["authkey"]
+    headers = {"Authorization": "Bearer " + server_authkey}
 
     # TODO: Handle connection errors
     base_url = config["server"]["base_url"]
@@ -283,8 +285,4 @@ async def main():
 
 if __name__ == "__main__":
     config.read("config.ini")
-
-    # server_host = config["server"]["host"]
-    # server_authkey = config["server"]["authkey"]
-
     asyncio.run(main())
