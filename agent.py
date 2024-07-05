@@ -133,7 +133,6 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
             await asyncio.sleep(1)
 
 
-# TODO: Add more logging
 async def websocket(
     signal_channel: Channel[Message], command_channel: Channel[Message]
 ):
@@ -149,10 +148,12 @@ async def websocket(
 
     while True:
         try:
-            # TODO: Construct the URI properly from the config
-            uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
-            # base_url = config["server"]["base_url"]
-            # uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
+            base_url = (
+                config["server"]["base_url"]
+                .replace("http://", "ws://")
+                .replace("https://", "wss://")
+            )
+            uri = f"{base_url}/{INSTANCE.id}/ws"
             async with websockets.connect(uri) as websocket:
 
                 async def read_signal_channel():
@@ -313,8 +314,8 @@ async def main():
             signal_channel: Channel[str] = Channel(8)
             comamnd_channel: Channel[str] = Channel(8)
 
+            # TODO: Add GPS task
             task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
-            # TODO: Create GPS task here
             task2 = tg.create_task(websocket(signal_channel, comamnd_channel))
             task3 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
