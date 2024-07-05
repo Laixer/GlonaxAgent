@@ -24,6 +24,23 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 
+class MessageChangeDetector:
+    def __init__(self):
+        self.last_message: Message | None = None
+        self.last_message_update = time.time()
+
+    def process_message(self, message: Message) -> bool:
+        has_changed = message != self.last_message or (
+            time.time() - self.last_message_update > 15
+        )
+        self.last_message = message
+        self.last_message_update = time.time()
+        return has_changed
+
+    def get_last_message(self) -> Message | None:
+        return self.last_message
+
+
 # class ForwardService(ServiceBase):
 #     global is_connected
 
@@ -153,6 +170,8 @@ async def websocket(
 
     await instance_event.wait()
 
+    engine_detector = MessageChangeDetector()
+
     while True:
         try:
             # uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
@@ -161,7 +180,11 @@ async def websocket(
 
                 async def read_signal_channel():
                     async for message in signal_channel:
-                        await websocket.send(message.model_dump_json())
+                        if message.topic == "engine":
+                            if engine_detector.process_message(message):
+                                await websocket.send(message.model_dump_json())
+                        elif message.topic == "status":
+                            await websocket.send(message.model_dump_json())
 
                 async def read_socket():
                     while True:
