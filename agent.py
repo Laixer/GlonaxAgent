@@ -53,36 +53,36 @@ logger = logging.getLogger()
 #             self.status_map[status.name] = status
 #             self.status_map_last_update[status.name] = time.time()
 
-    # def on_gnss(self, client: gclient.GlonaxClient, gnss: Gnss):
-    #     gnss_last_update_elapsed = time.time() - self.gnss_last_update
-    #     if self.gnss_last == gnss or gnss_last_update_elapsed > 15:
-    #         logger.info(f"GNSS: {gnss}")
+# def on_gnss(self, client: gclient.GlonaxClient, gnss: Gnss):
+#     gnss_last_update_elapsed = time.time() - self.gnss_last_update
+#     if self.gnss_last == gnss or gnss_last_update_elapsed > 15:
+#         logger.info(f"GNSS: {gnss}")
 
-    #         message = ChannelMessage(
-    #             type="signal", topic="gnss", data=gnss.model_dump()
-    #         )
+#         message = ChannelMessage(
+#             type="signal", topic="gnss", data=gnss.model_dump()
+#         )
 
-    #         if is_connected and ws:
-    #             # TODO: Only send if the connection is open
-    #             ws.send(message.model_dump_json())
+#         if is_connected and ws:
+#             # TODO: Only send if the connection is open
+#             ws.send(message.model_dump_json())
 
-    #         self.gnss_last = gnss
-    #         self.gnss_last_update = time.time()
+#         self.gnss_last = gnss
+#         self.gnss_last_update = time.time()
 
-    # def on_engine(self, engine: Engine):
-    #     engine_last_update_elapsed = time.time() - self.engine_last_update
-    #     if self.engine_last != engine or engine_last_update_elapsed > 15:
-    #         logger.info(f"Engine: {engine}")
-    #         message = ChannelMessage(
-    #             type="signal", topic="engine", data=engine.model_dump()
-    #         )
+# def on_engine(self, engine: Engine):
+#     engine_last_update_elapsed = time.time() - self.engine_last_update
+#     if self.engine_last != engine or engine_last_update_elapsed > 15:
+#         logger.info(f"Engine: {engine}")
+#         message = ChannelMessage(
+#             type="signal", topic="engine", data=engine.model_dump()
+#         )
 
-    #         if is_connected and ws:
-    #             # TODO: Only send if the connection is open
-    #             ws.send(message.model_dump_json())
+#         if is_connected and ws:
+#             # TODO: Only send if the connection is open
+#             ws.send(message.model_dump_json())
 
-    #         self.engine_last = engine
-    #         self.engine_last_update = time.time()
+#         self.engine_last = engine
+#         self.engine_last_update = time.time()
 
 
 async def update_host(instance: gclient.Instance):
@@ -134,13 +134,14 @@ async def update_telemetry(instance: gclient.Instance):
 
     headers = {"Authorization": "Bearer ABC@123"}
 
-    async with httpx.AsyncClient(http2=True) as client:
+    base_url = f"https://edge.laixer.equipment/api"
+    async with httpx.AsyncClient(
+        http2=True, base_url=base_url, headers=headers
+    ) as client:
         while True:
             try:
                 response = await client.post(
-                    f"https://edge.laixer.equipment/api/{instance.id}/telemetry",
-                    json=data,
-                    headers=headers,
+                    f"/{instance.id}/telemetry", json=data, headers=headers
                 )
                 response.raise_for_status()
 
@@ -152,8 +153,8 @@ async def update_telemetry(instance: gclient.Instance):
                 logger.error(f"Connection error: {e}")
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
-            finally:
-                await asyncio.sleep(60)
+
+            await asyncio.sleep(60)
 
 
 async def glonax_reader(
@@ -195,48 +196,46 @@ async def glonax_reader(
             logger.error(f"Error: {e}")
 
 
-async def websocket_reader(
-    session: Session, websocket: websockets.WebSocketClientProtocol
-):
-    message = ChannelMessage(type="signal", topic="boot")
-    await websocket.send(message.model_dump_json())
+async def websocket_reader(session: Session):
+    uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
+    async with websockets.connect(uri) as websocket:
 
-    while True:
-        try:
-            message = await websocket.recv()
-            data = json.loads(message)  # Assuming JSON messages
+        message = ChannelMessage(type="signal", topic="boot")
+        await websocket.send(message.model_dump_json())
 
-            message = ChannelMessage(**data)
+        while True:
+            try:
+                message = await websocket.recv()
+                data = json.loads(message)  # Assuming JSON messages
 
-            if message.type == "command" and message.topic == "control":
-                control = Control(**message.data)
-                logger.info("Control:", control)
+                message = ChannelMessage(**data)
 
-                await session.writer.control(control)
+                if message.type == "command" and message.topic == "control":
+                    control = Control(**message.data)
+                    logger.info("Control:", control)
 
-            elif message.type == "command" and message.topic == "engine":
-                engine = Engine(**message.data)
-                logger.info("Engine:", engine)
+                    await session.writer.control(control)
 
-                await session.writer.engine(engine)
+                elif message.type == "command" and message.topic == "engine":
+                    engine = Engine(**message.data)
+                    logger.info("Engine:", engine)
 
-            # except json.JSONDecodeError:
-            #     print("Received raw message:", message)
-            # except ValidationError as e:
-            #     print("Validation error:", e)
+                    await session.writer.engine(engine)
 
-        except asyncio.CancelledError:
-            logger.info("websocket reader cancelled")
-            break
-        except websockets.exceptions.ConnectionClosedError:
-            # TODO: Reconnect
-            logger.info("Connection closed")
-            break
-        except Exception as e:
-            logger.error(f"Error: {e}")
+                # except json.JSONDecodeError:
+                #     print("Received raw message:", message)
+                # except ValidationError as e:
+                #     print("Validation error:", e)
 
-    # MOVE
-    await websocket.close()
+            except asyncio.CancelledError:
+                logger.info("websocket reader cancelled")
+                break
+            except websockets.exceptions.ConnectionClosedError:
+                # TODO: Reconnect
+                logger.info("Connection closed")
+                break
+            except Exception as e:
+                logger.error(f"Error: {e}")
 
 
 async def main():
@@ -248,8 +247,8 @@ async def main():
 
             # TODO: Open GPS connection
 
-            uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
-            w = await websockets.connect(uri)
+            # uri = f"wss://edge.laixer.equipment/api/{session.instance.id}/ws"
+            # w = await websockets.connect(uri)
 
             logger.info(f"Instance ID: {session.instance.id}")
             logger.info(f"Instance model: {session.instance.model}")
@@ -258,7 +257,7 @@ async def main():
             logger.info(f"Instance serial number: {session.instance.serial_number}")
 
             async with asyncio.TaskGroup() as tg:
-                task1 = tg.create_task(glonax_reader(session, w))
+                task1 = tg.create_task(glonax_reader(session))
                 task2 = tg.create_task(websocket_reader(session, w))
                 task3 = tg.create_task(update_host(session.instance))
                 task4 = tg.create_task(update_telemetry(session.instance))
@@ -272,7 +271,7 @@ async def main():
 if __name__ == "__main__":
     config.read("config.ini")
 
-    server_host = config["server"]["host"]
-    server_authkey = config["server"]["authkey"]
+    # server_host = config["server"]["host"]
+    # server_authkey = config["server"]["authkey"]
 
     asyncio.run(main())
