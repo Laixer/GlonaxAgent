@@ -139,9 +139,11 @@ async def websocket(
 ):
     global INSTANCE, instance_event
 
-    logger.info("Starting websocket task")
+    logger.debug("Waiting for instance event")
 
     await instance_event.wait()
+
+    logger.info("Starting websocket task")
 
     engine_detector = MessageChangeDetector()
 
@@ -243,9 +245,11 @@ async def websocket(
 async def update_telemetry():
     global INSTANCE, instance_event
 
-    logger.info("Starting telemetry update task")
+    logger.debug("Waiting for instance event")
 
     await instance_event.wait()
+
+    logger.info("Starting telemetry update task")
 
     def seconds_elapsed() -> int:
         return round(time.time() - psutil.boot_time())
@@ -312,8 +316,7 @@ async def main():
             task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
             # TODO: Create GPS task here
             task2 = tg.create_task(websocket(signal_channel, comamnd_channel))
-            # task3 = tg.create_task(update_host())
-            task4 = tg.create_task(update_telemetry())
+            task3 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 
