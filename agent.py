@@ -48,7 +48,8 @@ class StatusChangeDetector:
     def process_status(self, status: Message) -> bool:
         last_update = self.last_status_update.get(status.topic, 0)
         has_changed = (
-            status != self.last_status.get(status.topic) or time.time() - last_update > 15
+            status != self.last_status.get(status.topic)
+            or time.time() - last_update > 15
         )
         self.last_status[status.topic] = status
         self.last_status_update[status.topic] = time.time()
@@ -56,6 +57,7 @@ class StatusChangeDetector:
 
     def get_last_status(self, topic: str) -> Message | None:
         return self.last_status.get(topic)
+
 
 #     # TODO: Wrap this up in a class
 #     status_map = {}

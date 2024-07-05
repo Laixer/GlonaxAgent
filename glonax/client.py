@@ -101,6 +101,10 @@ from glonax.message import (
 )
 
 
+class ProtocolError(Exception):
+    pass
+
+
 class GlonaxStreamWriter:
     def __init__(self, writer: asyncio.StreamWriter):
         self.writer = writer
@@ -126,43 +130,46 @@ class GlonaxStreamReader:
 
     async def read(self) -> tuple[MessageType, bytes]:
         header = await self.reader.readexactly(10)
-
         if header[:3] != b"LXR":
-            print("Invalid header received")  # TODO: Replace with exception
-            return
-
+            raise ProtocolError("Invalid header received")
         if header[3:4] != b"\x03":
-            print("Invalid protocol version")  # TODO: Replace with exception
-            return
+            raise ProtocolError("Invalid protocol version")
 
         message_type = MessageType(struct.unpack("B", header[4:5])[0])
         message_length = struct.unpack(">H", header[5:7])[0]
-
         if header[7:10] != b"\x00\x00\x00":
-            print("Invalid header padding")  # TODO: Replace with exception
-            return
-
+            raise ProtocolError("Invalid header padding")
         message = await self.reader.readexactly(message_length)
-
         if len(message) != message_length:
-            print("Invalid message length")  # TODO: Replace with exception
-            return
+            raise ProtocolError("Invalid message length")
 
         return message_type, message
 
 
-async def open_tcp_connection(
-    address: str = "localhost", port: int = 30051
-) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
-    reader, writer = await asyncio.open_connection(address, port)
-    reader = GlonaxStreamReader(reader)
-    writer = GlonaxStreamWriter(writer)
-    return reader, writer
+# async def open_tcp_connection(
+#     address: str = "localhost", port: int = 30051
+# ) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
+#     reader, writer = await asyncio.open_connection(address, port)
+#     reader = GlonaxStreamReader(reader)
+#     writer = GlonaxStreamWriter(writer)
+#     return reader, writer
 
 
 async def open_unix_connection(
     path: str = "/tmp/glonax.sock",
 ) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
+    """
+    Opens a Unix domain socket connection to the specified path.
+
+    Args:
+        path (str, optional): The path to the Unix domain socket. Defaults to "/tmp/glonax.sock".
+
+    Returns:
+        tuple[GlonaxStreamReader, GlonaxStreamWriter]: A tuple containing the reader and writer objects for the connection.
+
+    Raises:
+        ConnectionError: If the specified path does not exist.
+    """
     try:
         reader, writer = await asyncio.open_unix_connection(path)
         reader = GlonaxStreamReader(reader)
@@ -184,6 +191,11 @@ class Session:
         self.user_agent = user_agent
 
     async def close(self):
+        """
+        Closes the connection to the server.
+
+        This method drains any pending data in the writer, closes the writer, and waits until the writer is fully closed.
+        """
         await self.writer.writer.drain()
         self.writer.writer.close()
         await self.writer.writer.wait_closed()
