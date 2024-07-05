@@ -40,6 +40,23 @@ class MessageChangeDetector:
         return self.last_message
 
 
+class StatusChangeDetector:
+    def __init__(self):
+        self.last_status: dict[str, Message] = {}
+        self.last_status_update: dict[str, int] = {}
+
+    def process_status(self, status: Message) -> bool:
+        last_update = self.last_status_update.get(status.topic, 0)
+        has_changed = (
+            status != self.last_status.get(status.topic) or time.time() - last_update > 15
+        )
+        self.last_status[status.topic] = status
+        self.last_status_update[status.topic] = time.time()
+        return has_changed
+
+    def get_last_status(self, topic: str) -> Message | None:
+        return self.last_status.get(topic)
+
 #     # TODO: Wrap this up in a class
 #     status_map = {}
 #     status_map_last_update = {}
@@ -100,8 +117,6 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
                 async def read_command_channel():
                     async for message in command_channel:
-                        print("Command:", message)
-
                         if message.topic == "control":
                             await session.writer.control(message.payload)
                         elif message.topic == "engine":
