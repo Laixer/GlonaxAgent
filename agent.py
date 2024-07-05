@@ -14,7 +14,7 @@ from glonax import client as gclient
 from glonax.client import Session
 from glonax.message import Message, ChannelMessageType
 from pydantic import ValidationError
-
+from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 
 
@@ -70,39 +70,6 @@ class MessageChangeDetector:
 #             self.status_map[status.name] = status
 #             self.status_map_last_update[status.name] = time.time()
 
-# def on_gnss(self, client: gclient.GlonaxClient, gnss: Gnss):
-#     gnss_last_update_elapsed = time.time() - self.gnss_last_update
-#     if self.gnss_last == gnss or gnss_last_update_elapsed > 15:
-#         logger.info(f"GNSS: {gnss}")
-
-#         message = ChannelMessage(
-#             type="signal", topic="gnss", data=gnss.model_dump()
-#         )
-
-#         if is_connected and ws:
-#             # TODO: Only send if the connection is open
-#             ws.send(message.model_dump_json())
-
-#         self.gnss_last = gnss
-#         self.gnss_last_update = time.time()
-
-# def on_engine(self, engine: Engine):
-#     engine_last_update_elapsed = time.time() - self.engine_last_update
-#     if self.engine_last != engine or engine_last_update_elapsed > 15:
-#         logger.info(f"Engine: {engine}")
-#         message = ChannelMessage(
-#             type="signal", topic="engine", data=engine.model_dump()
-#         )
-
-#         if is_connected and ws:
-#             # TODO: Only send if the connection is open
-#             ws.send(message.model_dump_json())
-
-#         self.engine_last = engine
-#         self.engine_last_update = time.time()
-
-
-from aiochannel import Channel, ChannelClosed, ChannelFull
 
 INSTANCE: gclient.Instance | None = None
 
@@ -175,6 +142,7 @@ async def websocket(
     while True:
         try:
             # uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
+            # base_url = config["server"]["base_url"]
             uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
             async with websockets.connect(uri) as websocket:
 
@@ -227,7 +195,7 @@ async def update_host():
 
     headers = {"Authorization": "Bearer ABC@123"}
 
-    base_url = f"https://edge.laixer.equipment/api/{INSTANCE.id}"
+    base_url = config["server"]["base_url"]
     async with httpx.AsyncClient(
         http2=True, base_url=base_url, headers=headers
     ) as client:
@@ -242,7 +210,7 @@ async def update_host():
                 )
                 data = host_config.model_dump()
 
-                response = await client.put(f"/host", json=data)
+                response = await client.put(f"/{INSTANCE.id}/host", json=data)
                 response.raise_for_status()
 
             except asyncio.CancelledError:
@@ -268,7 +236,7 @@ async def update_telemetry():
     headers = {"Authorization": "Bearer ABC@123"}
 
     # TODO: Handle connection errors
-    base_url = f"https://edge.laixer.equipment/api/{INSTANCE.id}"
+    base_url = config["server"]["base_url"]
     async with httpx.AsyncClient(
         http2=True, base_url=base_url, headers=headers
     ) as client:
@@ -283,7 +251,7 @@ async def update_telemetry():
                 )
                 data = telemetry.model_dump()
 
-                response = await client.post("/telemetry", json=data)
+                response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
                 response.raise_for_status()
 
             except asyncio.CancelledError:
