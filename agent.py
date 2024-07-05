@@ -81,7 +81,8 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
     while True:
         try:
-            reader, writer = await gclient.open_unix_connection()
+            path = config["glonax"]["unix_socket"]
+            reader, writer = await gclient.open_unix_connection(path)
 
             async with Session(reader, writer) as session:
                 await session.handshake()
@@ -141,9 +142,9 @@ async def websocket(
 
     while True:
         try:
-            # uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
+            uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
             # base_url = config["server"]["base_url"]
-            uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
+            # uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
             async with websockets.connect(uri) as websocket:
 
                 async def read_signal_channel():
