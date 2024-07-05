@@ -153,44 +153,48 @@ async def websocket(
 
     await instance_event.wait()
 
-    logger.info("Starting websocket task")
+    while True:
+        try:
+            # uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
+            uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
+            async with websockets.connect(uri) as websocket:
 
-    # uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
-    uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
-    async with websockets.connect(uri) as websocket:
+                async def read_signal_channel():
+                    async for message in signal_channel:
+                        await websocket.send(message.model_dump_json())
 
-        async def read_signal_channel():
-            async for item in signal_channel:
-                # await websocket.send(item.model_dump_json())
-                # print("Sent:", item.model_dump_json())
-                pass
+                async def read_socket():
+                    while True:
+                        try:
+                            message = await websocket.recv()
+                            data = json.loads(message)
 
-        async def read_socket():
-            while True:
-                try:
-                    message = await websocket.recv()
-                    data = json.loads(message)
+                            message = Message(**data)
+                            if message.type == ChannelMessageType.COMMAND:
+                                command_channel.put_nowait(message)
 
-                    message = Message(**data)
-                    if message.type == ChannelMessageType.COMMAND:
-                        command_channel.put_nowait(message)
+                        except json.JSONDecodeError:
+                            print("Received raw message:", message)
+                        except ValidationError as e:
+                            print("Validation error:", e)
 
-                except json.JSONDecodeError:
-                    print("Received raw message:", message)
-                except ValidationError as e:
-                    print("Validation error:", e)
+                await asyncio.gather(read_signal_channel(), read_socket())
 
-                except asyncio.CancelledError:
-                    logger.info("websocket reader cancelled")
-                    break
-                except websockets.exceptions.ConnectionClosedError:
-                    # TODO: Reconnect
-                    logger.info("websocket connection closed")
-                    break
-                except Exception as e:
-                    logger.error(f"Error: {e}")
-
-        await asyncio.gather(read_signal_channel(), read_socket())
+        except asyncio.CancelledError:
+            logger.info("websocket reader cancelled")
+            return
+        except ChannelClosed:
+            logger.error("websocket channel closed")
+            return
+        except websockets.exceptions.ConnectionClosedError:
+            logger.info("websocket connection closed")
+            await asyncio.sleep(1)
+        except ConnectionResetError:
+            logger.error("websocket connection reset")
+            await asyncio.sleep(1)
+        except ConnectionRefusedError:
+            logger.error("websocket connection refused")
+            await asyncio.sleep(1)
 
 
 async def update_host():
