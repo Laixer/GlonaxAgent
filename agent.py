@@ -4,6 +4,7 @@ import os
 import time
 import logging
 import configparser
+import argparse
 import httpx
 import psutil
 import json
@@ -17,8 +18,6 @@ from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 
-
-logging.basicConfig(level=logging.INFO)
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -40,9 +39,6 @@ class MessageChangeDetector:
     def get_last_message(self) -> Message | None:
         return self.last_message
 
-
-# class ForwardService(ServiceBase):
-#     global is_connected
 
 #     # TODO: Wrap this up in a class
 #     status_map = {}
@@ -76,13 +72,16 @@ INSTANCE: gclient.Instance | None = None
 instance_event = asyncio.Event()
 
 
-# TODO: Add more logging
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
+
+    logger.info("Starting Glonax task")
 
     while True:
         try:
             path = config["glonax"]["unix_socket"]
+            logger.info(f"Connecting to Glonax at {path}")
+
             reader, writer = await gclient.open_unix_connection(path)
 
             async with Session(reader, writer) as session:
@@ -96,6 +95,8 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
                 INSTANCE = session.instance
                 instance_event.set()
+
+                logger.debug("Instance event set")
 
                 async def read_command_channel():
                     async for message in command_channel:
@@ -137,6 +138,8 @@ async def websocket(
     signal_channel: Channel[Message], command_channel: Channel[Message]
 ):
     global INSTANCE, instance_event
+
+    logger.info("Starting websocket task")
 
     await instance_event.wait()
 
@@ -193,9 +196,10 @@ async def websocket(
             await asyncio.sleep(1)
 
 
-# TODO: Add more logging
 async def update_host():
     global INSTANCE, instance_event
+
+    logger.info("Starting host update task")
 
     await instance_event.wait()
 
@@ -236,9 +240,10 @@ async def update_host():
                 await asyncio.sleep(60 * 20)
 
 
-# TODO: Add more logging
 async def update_telemetry():
     global INSTANCE, instance_event
+
+    logger.info("Starting telemetry update task")
 
     await instance_event.wait()
 
@@ -297,5 +302,20 @@ async def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Glonax agent for the Laixer Edge platform"
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level",
+    )
+    args = parser.parse_args()
+
+    log_level = logging.getLevelName(args.log_level.upper())
+    logging.basicConfig(level=log_level)
+
     config.read("config.ini")
+
     asyncio.run(main())
