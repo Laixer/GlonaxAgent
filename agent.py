@@ -118,43 +118,33 @@ async def glonax(channel: Channel[str]):
                             status = ModuleStatus.from_bytes(message)
                             logger.info(f"Status: {status}")
 
-                            message = ChannelMessage(
-                                type="signal", topic="status", data=status.model_dump()
-                            )
-
-                            # await websocket.send(message.model_dump_json())
-
-                            # TODO: Handle ChannelClosed
-                            # TODO: Just continue if the queue is full
-                            # await channel.put(message.model_dump_json())
+                            message = ChannelMessage(type="signal", topic="status", data=status.model_dump())
                             channel.put_nowait(message.model_dump_json())
 
                         elif message_type == MessageType.ENGINE:
                             engine = Engine.from_bytes(message)
                             logger.info(f"Engine: {engine}")
 
-                            # message = ChannelMessage(
-                            #     type="signal", topic="engine", data=engine.model_dump()
-                            # )
-                            # await websocket.send(message.model_dump_json())
+                            message = ChannelMessage(type="signal", topic="engine", data=engine.model_dump())
+                            channel.put_nowait(message.model_dump_json())
 
                         else:
-                            logger.warning(f"Unknown message type: {message_type}")
+                            logger.warning(f"glonax unknown message type: {message_type}")
 
                     except ChannelFull:
-                        logger.warning("Channel is full")
+                        logger.warning("glonax channel is full")
                     except asyncio.IncompleteReadError as e:
-                        logger.info("Connection closed")
+                        logger.info("glonax reader disconnected")
                         break
 
         except asyncio.CancelledError:
             logger.info("glonax task cancelled")
             return
         except ChannelClosed:
-            logger.error("Channel is closed")
+            logger.error("glonax channel closed")
             return
         except ConnectionError as e:
-            logger.error(f"Connection error: {e}")
+            logger.error(f"glonax connection error: {e}")
             await asyncio.sleep(1)
 
 
@@ -294,7 +284,7 @@ async def update_telemetry():
 async def main():
     try:
         async with asyncio.TaskGroup() as tg:
-            signal_channel: Channel[str] = Channel(32)
+            signal_channel: Channel[str] = Channel(8)
 
             task1 = tg.create_task(glonax(signal_channel))
             # TODO: Create GPS task here
