@@ -196,48 +196,48 @@ async def websocket(
             await asyncio.sleep(1)
 
 
-async def update_host():
-    global INSTANCE, instance_event
+# async def update_host():
+#     global INSTANCE, instance_event
 
-    logger.info("Starting host update task")
+#     logger.info("Starting host update task")
 
-    await instance_event.wait()
+#     await instance_event.wait()
 
-    server_authkey = config["server"]["authkey"]
-    headers = {"Authorization": "Bearer " + server_authkey}
+#     server_authkey = config["server"]["authkey"]
+#     headers = {"Authorization": "Bearer " + server_authkey}
 
-    base_url = config["server"]["base_url"]
-    async with httpx.AsyncClient(
-        http2=True, base_url=base_url, headers=headers
-    ) as client:
-        while True:
-            try:
-                host_config = HostConfig(
-                    hostname=os.uname().nodename,
-                    kernel=os.uname().release,
-                    memory_total=psutil.virtual_memory().total,
-                    cpu_count=psutil.cpu_count(),
-                    model=INSTANCE.model,
-                    version=INSTANCE.version_string,
-                    serial_number=INSTANCE.serial_number,
-                )
-                data = host_config.model_dump()
+#     base_url = config["server"]["base_url"]
+#     async with httpx.AsyncClient(
+#         http2=True, base_url=base_url, headers=headers
+#     ) as client:
+#         while True:
+#             try:
+#                 host_config = HostConfig(
+#                     hostname=os.uname().nodename,
+#                     kernel=os.uname().release,
+#                     memory_total=psutil.virtual_memory().total,
+#                     cpu_count=psutil.cpu_count(),
+#                     model=INSTANCE.model,
+#                     version=INSTANCE.version_string,
+#                     serial_number=INSTANCE.serial_number,
+#                 )
+#                 data = host_config.model_dump()
 
-                response = await client.put(f"/{INSTANCE.id}/host", json=data)
-                response.raise_for_status()
+#                 response = await client.put(f"/{INSTANCE.id}/host", json=data)
+#                 response.raise_for_status()
 
-            except asyncio.CancelledError:
-                break
-            except httpx.HTTPStatusError as e:
-                logger.error(f"HTTP error: {e}")
-            except httpx.ConnectError as e:
-                logger.error(f"Connection error: {e}")
-            except httpx.ConnectTimeout as e:
-                logger.error(f"Connection timeout: {e}")
-            except Exception as e:
-                logger.error(f"Unknown error: {e}")
-            finally:
-                await asyncio.sleep(60 * 20)
+#             except asyncio.CancelledError:
+#                 break
+#             except httpx.HTTPStatusError as e:
+#                 logger.error(f"HTTP error: {e}")
+#             except httpx.ConnectError as e:
+#                 logger.error(f"Connection error: {e}")
+#             except httpx.ConnectTimeout as e:
+#                 logger.error(f"Connection timeout: {e}")
+#             except Exception as e:
+#                 logger.error(f"Unknown error: {e}")
+#             finally:
+#                 await asyncio.sleep(60 * 20)
 
 
 async def update_telemetry():
@@ -253,13 +253,14 @@ async def update_telemetry():
     server_authkey = config["server"]["authkey"]
     headers = {"Authorization": "Bearer " + server_authkey}
 
-    # TODO: Handle connection errors
     base_url = config["server"]["base_url"]
     async with httpx.AsyncClient(
         http2=True, base_url=base_url, headers=headers
     ) as client:
         while True:
             try:
+                await asyncio.sleep(15)
+
                 telemetry = Telemetry(
                     memory_used=psutil.virtual_memory().percent,
                     disk_used=psutil.disk_usage("/").percent,
@@ -272,18 +273,34 @@ async def update_telemetry():
                 response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
                 response.raise_for_status()
 
+                await asyncio.sleep(30)
+
+                host_config = HostConfig(
+                    hostname=os.uname().nodename,
+                    kernel=os.uname().release,
+                    memory_total=psutil.virtual_memory().total,
+                    cpu_count=psutil.cpu_count(),
+                    model=INSTANCE.model,
+                    version=INSTANCE.version_string,
+                    serial_number=INSTANCE.serial_number,
+                )
+                data = host_config.model_dump()
+
+                response = await client.put(f"/{INSTANCE.id}/host", json=data)
+                response.raise_for_status()
+
+                await asyncio.sleep(15)
+
             except asyncio.CancelledError:
                 break
-            except httpx.HTTPStatusError as e:
-                logger.error(f"HTTP error: {e}")
-            except httpx.ConnectError as e:
-                logger.error(f"Connection error: {e}")
-            except httpx.ConnectTimeout as e:
-                logger.error(f"Connection timeout: {e}")
+            except (
+                httpx.HTTPStatusError,
+                httpx.ConnectTimeout,
+                httpx.ConnectError,
+            ) as e:
+                logger.error(f"HTTP Error: {e}")
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
-
-            await asyncio.sleep(60)
 
 
 async def main():
@@ -295,7 +312,7 @@ async def main():
             task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
             # TODO: Create GPS task here
             task2 = tg.create_task(websocket(signal_channel, comamnd_channel))
-            task3 = tg.create_task(update_host())
+            # task3 = tg.create_task(update_host())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
