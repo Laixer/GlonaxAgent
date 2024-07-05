@@ -76,6 +76,7 @@ INSTANCE: gclient.Instance | None = None
 instance_event = asyncio.Event()
 
 
+# TODO: Add more logging
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
@@ -131,6 +132,7 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
             await asyncio.sleep(1)
 
 
+# TODO: Add more logging
 async def websocket(
     signal_channel: Channel[Message], command_channel: Channel[Message]
 ):
@@ -142,6 +144,7 @@ async def websocket(
 
     while True:
         try:
+            # TODO: Construct the URI properly from the config
             uri = f"wss://edge.laixer.equipment/api/{INSTANCE.id}/ws"
             # base_url = config["server"]["base_url"]
             # uri = f"ws://localhost:8000/{INSTANCE.id}/ws"
@@ -153,6 +156,7 @@ async def websocket(
                             if engine_detector.process_message(message):
                                 await websocket.send(message.model_dump_json())
                         elif message.topic == "status":
+                            # TODO: Only send status if it has changed
                             await websocket.send(message.model_dump_json())
 
                 async def read_socket():
@@ -189,6 +193,7 @@ async def websocket(
             await asyncio.sleep(1)
 
 
+# TODO: Add more logging
 async def update_host():
     global INSTANCE, instance_event
 
@@ -231,6 +236,7 @@ async def update_host():
                 await asyncio.sleep(60 * 20)
 
 
+# TODO: Add more logging
 async def update_telemetry():
     global INSTANCE, instance_event
 

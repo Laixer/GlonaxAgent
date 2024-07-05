@@ -224,6 +224,7 @@ class Session:
             self.instance = Instance.from_bytes(message)
             logger.debug(f"Instance ID: {self.instance}")
 
+    # TODO: See if we can reuse some of the methods from the `Session` class
     async def recv_message(self) -> Message | None:
         message_type, message = await self.reader.read()
         if message_type == MessageType.INSTANCE:
