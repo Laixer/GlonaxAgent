@@ -200,6 +200,12 @@ class Session:
         self.writer.writer.close()
         await self.writer.writer.wait_closed()
 
+    def __del__(self):
+        """
+        Destructor for the Session class.
+        """
+        self.close()
+
     async def __aenter__(self):
         return self
 
