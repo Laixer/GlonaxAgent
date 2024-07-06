@@ -162,6 +162,7 @@ async def websocket(
     logger.info("Starting websocket task")
 
     engine_detector = MessageChangeDetector()
+    status_detector = StatusChangeDetector()
 
     while True:
         try:
@@ -180,8 +181,8 @@ async def websocket(
                             if engine_detector.process_message(message):
                                 await websocket.send(message.model_dump_json())
                         elif message.topic == "status":
-                            # TODO: Only send status if it has changed
-                            await websocket.send(message.model_dump_json())
+                            if status_detector.process_status(message):
+                                await websocket.send(message.model_dump_json())
 
                 async def read_socket():
                     while True:
