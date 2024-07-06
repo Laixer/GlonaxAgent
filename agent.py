@@ -3,6 +3,7 @@
 import os
 import time
 import logging
+import random
 import configparser
 import argparse
 import httpx
@@ -54,33 +55,6 @@ class StatusChangeDetector:
         self.last_status[status.name] = status
         self.last_status_update[status.name] = time.time()
         return has_changed
-
-
-#     # TODO: Wrap this up in a class
-#     status_map = {}
-#     status_map_last_update = {}
-#     # gnss_last: Gnss | None = None
-#     # gnss_last_update = time.time()
-#     engine_last: Engine | None = None
-#     engine_last_update = time.time()
-
-#     def on_status(self, status: ModuleStatus):
-#         val = self.status_map.get(status.name)
-#         last_update = self.status_map_last_update.get(status.name, 0)
-#         last_update_elapsed = time.time() - last_update
-#         if val is None or val != status or last_update_elapsed > 15:
-#             logger.info(f"Status: {status}")
-
-#             message = ChannelMessage(
-#                 type="signal", topic="status", data=status.model_dump()
-#             )
-
-#             if is_connected and ws:
-#                 # TODO: Only send if the connection is open
-#                 ws.send(message.model_dump_json())
-
-#             self.status_map[status.name] = status
-#             self.status_map_last_update[status.name] = time.time()
 
 
 INSTANCE: gclient.Instance | None = None
@@ -263,8 +237,9 @@ async def update_telemetry():
                 )
                 data = host_config.model_dump()
 
-                response = await client.put(f"/{INSTANCE.id}/host", json=data)
-                response.raise_for_status()
+                if random.randint(1, 15) == 1:
+                    response = await client.put(f"/{INSTANCE.id}/host", json=data)
+                    response.raise_for_status()
 
                 await asyncio.sleep(15)
 
