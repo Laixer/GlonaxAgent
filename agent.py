@@ -169,6 +169,7 @@ async def websocket(
                 config["server"]["base_url"]
                 .replace("http://", "ws://")
                 .replace("https://", "wss://")
+                .rstrip("/")
             )
             uri = f"{base_url}/{INSTANCE.id}/ws"
             async with websockets.connect(uri) as websocket:
@@ -214,50 +215,6 @@ async def websocket(
         except ConnectionRefusedError:
             logger.error("Websocket connection refused")
             await asyncio.sleep(1)
-
-
-# async def update_host():
-#     global INSTANCE, instance_event
-
-#     logger.info("Starting host update task")
-
-#     await instance_event.wait()
-
-#     server_authkey = config["server"]["authkey"]
-#     headers = {"Authorization": "Bearer " + server_authkey}
-
-#     base_url = config["server"]["base_url"]
-#     async with httpx.AsyncClient(
-#         http2=True, base_url=base_url, headers=headers
-#     ) as client:
-#         while True:
-#             try:
-#                 host_config = HostConfig(
-#                     hostname=os.uname().nodename,
-#                     kernel=os.uname().release,
-#                     memory_total=psutil.virtual_memory().total,
-#                     cpu_count=psutil.cpu_count(),
-#                     model=INSTANCE.model,
-#                     version=INSTANCE.version_string,
-#                     serial_number=INSTANCE.serial_number,
-#                 )
-#                 data = host_config.model_dump()
-
-#                 response = await client.put(f"/{INSTANCE.id}/host", json=data)
-#                 response.raise_for_status()
-
-#             except asyncio.CancelledError:
-#                 break
-#             except httpx.HTTPStatusError as e:
-#                 logger.error(f"HTTP error: {e}")
-#             except httpx.ConnectError as e:
-#                 logger.error(f"Connection error: {e}")
-#             except httpx.ConnectTimeout as e:
-#                 logger.error(f"Connection timeout: {e}")
-#             except Exception as e:
-#                 logger.error(f"Unknown error: {e}")
-#             finally:
-#                 await asyncio.sleep(60 * 20)
 
 
 async def update_telemetry():
