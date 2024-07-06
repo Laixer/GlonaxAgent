@@ -13,7 +13,7 @@ import websockets
 
 from glonax import client as gclient
 from glonax.client import Session
-from glonax.message import Message, ChannelMessageType
+from glonax.message import Message, ChannelMessageType, ModuleStatus
 from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
@@ -42,21 +42,21 @@ class MessageChangeDetector:
 
 class StatusChangeDetector:
     def __init__(self):
-        self.last_status: dict[str, Message] = {}
+        self.last_status: dict[str, ModuleStatus] = {}
         self.last_status_update: dict[str, int] = {}
 
-    def process_status(self, status: Message) -> bool:
-        last_update = self.last_status_update.get(status.topic, 0)
+    def process_status(self, status: ModuleStatus) -> bool:
+        last_update = self.last_status_update.get(status.name, 0)
         has_changed = (
-            status != self.last_status.get(status.topic)
+            status != self.last_status.get(status.name)
             or time.time() - last_update > 15
         )
-        self.last_status[status.topic] = status
-        self.last_status_update[status.topic] = time.time()
+        self.last_status[status.name] = status
+        self.last_status_update[status.name] = time.time()
         return has_changed
 
-    def get_last_status(self, topic: str) -> Message | None:
-        return self.last_status.get(topic)
+    # def get_last_status(self, topic: str) -> Message | None:
+    #     return self.last_status.get(name)
 
 
 #     # TODO: Wrap this up in a class
@@ -181,7 +181,7 @@ async def websocket(
                             if engine_detector.process_message(message):
                                 await websocket.send(message.model_dump_json())
                         elif message.topic == "status":
-                            if status_detector.process_status(message):
+                            if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
 
                 async def read_socket():
