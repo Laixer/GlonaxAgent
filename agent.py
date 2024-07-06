@@ -255,6 +255,41 @@ async def update_telemetry():
                 logger.error(f"Unknown error: {e}")
 
 
+async def gps_handler():
+    from asyncio_gpsd_client import GpsdClient
+
+    HOST = "127.0.0.1"
+    PORT = 2947
+
+    async with GpsdClient(HOST, PORT) as client:
+        print(await client.poll())  # Get gpsd POLL response
+        while True:
+            print(await client.get_result())  # Get gpsd TPV responses
+
+    # async with gps.aiogps.aiogps() as gpsd:
+    #     async for msg in gpsd:
+    #         logging.info(f"Received: {msg}")
+    #         logging.info(f"\nGPS status:\n{gpsd}")
+
+    # try:
+    #     async with gps.aiogps.aiogps(
+    #         connection_args={"host": "192.168.10.116", "port": 2947},
+    #         connection_timeout=5,
+    #         reconnect=0,  # do not try to reconnect, raise exceptions
+    #         alive_opts={"rx_timeout": 5},
+    #     ) as gpsd:
+    #         async for msg in gpsd:
+    #             logging.info(msg)
+    # except asyncio.CancelledError:
+    #     return
+    # except asyncio.IncompleteReadError:
+    #     logging.info("Connection closed by server")
+    # except asyncio.TimeoutError:
+    #     logging.error("Timeout waiting for gpsd to respond")
+    # except Exception as exc:
+    #     logging.error(f"Error: {exc}")
+
+
 async def main():
     try:
         async with asyncio.TaskGroup() as tg:
@@ -263,8 +298,9 @@ async def main():
 
             # TODO: Add GPS task
             task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
-            task2 = tg.create_task(websocket(signal_channel, comamnd_channel))
-            task3 = tg.create_task(update_telemetry())
+            # task2 = tg.create_task(gps_handler())
+            task3 = tg.create_task(websocket(signal_channel, comamnd_channel))
+            task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 
