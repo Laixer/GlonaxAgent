@@ -30,7 +30,7 @@ class MessageChangeDetector:
 
     def process_message(self, message: Message) -> bool:
         has_changed = message != self.last_message or (
-            time.time() - self.last_message_update > 15
+            (time.time() - self.last_message_update) > 15
         )
         self.last_message = message
         self.last_message_update = time.time()
@@ -49,14 +49,11 @@ class StatusChangeDetector:
         last_update = self.last_status_update.get(status.name, 0)
         has_changed = (
             status != self.last_status.get(status.name)
-            or time.time() - last_update > 15
+            or (time.time() - last_update) > 15
         )
         self.last_status[status.name] = status
         self.last_status_update[status.name] = time.time()
         return has_changed
-
-    # def get_last_status(self, topic: str) -> Message | None:
-    #     return self.last_status.get(name)
 
 
 #     # TODO: Wrap this up in a class
