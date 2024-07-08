@@ -123,4 +123,4 @@ class Poll(BaseModel):
 #     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
 #         discriminator="class_", alias="class"
 #     )
-Response = RootModel[Poll | Sky | TPV | Devices | Version] # | Watch]
+Response = RootModel[Poll | Sky | TPV | Devices | Version | Watch]
