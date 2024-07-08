@@ -1,7 +1,7 @@
 import asyncio
 
 # from gps.exceptions import GpsdClientError
-from gps.schemas import TPV, Devices, Response, Sky, Version, Watch
+from gps.schemas import TPV, Devices, Response, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
 WATCH = "?WATCH={}\r\n"
@@ -48,8 +48,33 @@ class GpsdClient:
         await self.writer.wait_closed()
 
     async def get_result(self):
+        import json
+
         # return Response.parse_raw(await self.reader.readline()).__root__
-        return Response.model_validate_json(await self.reader.readline())
+        resp = await self.reader.readline()
+        cls = json.loads(resp).get("class")
+
+        # VERSION
+        # DEVICES
+        # WATCH
+        # POLL
+
+        if cls == "VERSION":
+            return Version.model_validate_json(resp)
+        elif cls == "DEVICES":
+            return Devices.model_validate_json(resp)
+        elif cls == "WATCH":
+            return Watch.model_validate_json(resp)
+        elif cls == "TPV":
+            return TPV.model_validate_json(resp)
+        elif cls == "SKY":
+            return Sky.model_validate_json(resp)
+        elif cls == "POLL":
+            return Poll.model_validate_json(resp)
+        else:
+            print("Unknown class:", cls)
+
+        # return Response.model_validate_json(resp)
 
     async def poll(self):
         self.writer.write(POLL.encode())
