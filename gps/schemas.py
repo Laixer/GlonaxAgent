@@ -96,14 +96,14 @@ class Sky(BaseModel):
     device: str
     xdop: float | None = None
     ydop: float | None = None
-    vdop: float
-    tdop: float
-    hdop: float
-    gdop: float
-    pdop: float
+    vdop: float | None = None
+    tdop: float | None = None
+    hdop: float | None = None
+    gdop: float | None = None
+    pdop: float | None = None
     nSat: int
     uSat: int
-    satellites: list[PRN]
+    satellites: list[PRN] | None = None
 
 
 class Poll(BaseModel):
