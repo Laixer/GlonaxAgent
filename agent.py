@@ -104,9 +104,6 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
                         except ChannelFull:
                             logger.warning("Glonax signal channel is full")
-                        except asyncio.IncompleteReadError as e:
-                            logger.info("Glonax disconnected")
-                            break
 
                 await asyncio.gather(read_command_channel(), read_session())
 
@@ -116,6 +113,9 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
         except ChannelClosed:
             logger.error("Glonax channel closed")
             return
+        except asyncio.IncompleteReadError as e:
+            logger.error("Glonax disconnected")
+            await asyncio.sleep(1)
         except ConnectionError as e:
             logger.error(f"Glonax connection error: {e}")
             await asyncio.sleep(1)
