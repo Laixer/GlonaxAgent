@@ -1,6 +1,5 @@
 import asyncio
 
-# from gps.exceptions import GpsdClientError
 from gps.schemas import TPV, Devices, Response, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
@@ -53,11 +52,6 @@ class GpsdClient:
         # return Response.parse_raw(await self.reader.readline()).__root__
         resp = await self.reader.readline()
         cls = json.loads(resp).get("class")
-
-        # VERSION
-        # DEVICES
-        # WATCH
-        # POLL
 
         if cls == "VERSION":
             return Version.model_validate_json(resp)

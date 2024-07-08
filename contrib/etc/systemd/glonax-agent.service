@@ -1,12 +1,17 @@
 [Unit]
 Description=Glonax Agent
-After=network.target # NETWORK ONLINE
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
+#User=your_username
+#Group=your_group
 WorkingDirectory=/home/eve/glonax_agent
-ExecStart=/home/eve/glonax_agent/.venv/bin/python3 /home/eve/glonax_agent/agent.py
+ExecStart=/bin/bash -c 'source /home/eve/glonax_agent/.venv/bin/activate && python3 /home/eve/glonax_agent/agent.py'
 Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
