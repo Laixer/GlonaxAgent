@@ -3,4 +3,3 @@ psutil==6.0.0
 websockets==12.0
 pydantic==2.7.4
 aiochannel==1.2.1
-asyncio-gpsd-client==0.2.2
