@@ -61,24 +61,24 @@ class TPV(BaseModel):
     mode: Mode
     time: datetime
     ept: float
-    lat: float
-    lon: float
-    altHAE: float
-    altMSL: float
-    alt: float
-    epx: float
-    epy: float
-    epv: float
-    track: Optional[float]
-    magtrack: Optional[float]
-    magvar: float
-    speed: float
-    climb: float
-    eps: float
-    epc: float
-    geoidSep: float
-    eph: float
-    sep: float
+    lat: float | None = None
+    lon: float | None = None
+    altHAE: float | None = None
+    altMSL: float | None = None
+    alt: float | None = None
+    epx: float | None = None
+    epy: float | None = None
+    epv: float | None = None
+    track: float | None = None
+    magtrack: float | None = None
+    magvar: float | None = None
+    speed: float | None = None
+    climb: float | None = None
+    eps: float | None = None
+    epc: float | None = None
+    geoidSep: float | None = None
+    eph: float | None = None
+    sep: float | None = None
 
 
 class PRN(BaseModel):
