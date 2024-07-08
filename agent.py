@@ -256,20 +256,15 @@ async def update_telemetry():
 
 
 async def gps_handler():
-    from asyncio_gpsd_client import GpsdClient
+    from gps import client
 
     HOST = "127.0.0.1"
     PORT = 2947
 
-    async with GpsdClient(HOST, PORT) as client:
+    async with client.GpsdClient(HOST, PORT) as client:
         print(await client.poll())  # Get gpsd POLL response
         while True:
             print(await client.get_result())  # Get gpsd TPV responses
-
-    # async with gps.aiogps.aiogps() as gpsd:
-    #     async for msg in gpsd:
-    #         logging.info(f"Received: {msg}")
-    #         logging.info(f"\nGPS status:\n{gpsd}")
 
     # try:
     #     async with gps.aiogps.aiogps(
@@ -297,10 +292,10 @@ async def main():
             comamnd_channel: Channel[str] = Channel(8)
 
             # TODO: Add GPS task
-            task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
-            # task2 = tg.create_task(gps_handler())
-            task3 = tg.create_task(websocket(signal_channel, comamnd_channel))
-            task4 = tg.create_task(update_telemetry())
+            # task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
+            task2 = tg.create_task(gps_handler())
+            # task3 = tg.create_task(websocket(signal_channel, comamnd_channel))
+            # task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 
