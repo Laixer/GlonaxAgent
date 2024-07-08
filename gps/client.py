@@ -48,7 +48,8 @@ class GpsdClient:
         await self.writer.wait_closed()
 
     async def get_result(self):
-        return Response.parse_raw(await self.reader.readline()).__root__
+        # return Response.parse_raw(await self.reader.readline()).__root__
+        return Response.model_validate_json(await self.reader.readline())
 
     async def poll(self):
         self.writer.write(POLL.encode())

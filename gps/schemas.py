@@ -13,7 +13,7 @@ class Mode(IntEnum):
 
 
 class Watch(BaseModel):
-    class_: Literal["WATCH"] = Field("WATCH", alias="class")
+    # class_: Literal["WATCH"] = Field("WATCH", alias="class")
     enable: bool = True
     json_: bool = Field(True, alias="json")
     split24: bool = False
@@ -24,7 +24,7 @@ class Watch(BaseModel):
 
 
 class Version(BaseModel):
-    class_: Literal["VERSION"] = Field(alias="class")
+    # class_: Literal["VERSION"] = Field(alias="class")
     release: str
     rev: str
     proto_major: int
@@ -36,7 +36,7 @@ class Version(BaseModel):
 
 
 class Device(BaseModel):
-    class_: Literal["DEVICE"] = Field(alias="class")
+    # class_: Literal["DEVICE"] = Field(alias="class")
     path: str
     driver: str
     subtype: str
@@ -51,12 +51,12 @@ class Device(BaseModel):
 
 
 class Devices(BaseModel):
-    class_: Literal["DEVICES"] = Field(alias="class")
+    # class_: Literal["DEVICES"] = Field(alias="class")
     devices: list[Device]
 
 
 class TPV(BaseModel):
-    class_: Literal["TPV"] = Field(alias="class")
+    # class_: Literal["TPV"] = Field(alias="class")
     device: str
     mode: Mode
     time: datetime
@@ -92,7 +92,7 @@ class PRN(BaseModel):
 
 
 class Sky(BaseModel):
-    class_: Literal["SKY"] = Field(alias="class")
+    # class_: Literal["SKY"] = Field(alias="class")
     device: str
     xdop: float
     ydop: float
@@ -106,7 +106,7 @@ class Sky(BaseModel):
 
 
 class Poll(BaseModel):
-    class_: Literal["POLL"] = Field(alias="class")
+    # class_: Literal["POLL"] = Field(alias="class")
     time: datetime
     active: int
     tpv: list[TPV]
@@ -123,4 +123,4 @@ class Poll(BaseModel):
 #     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
 #         discriminator="class_", alias="class"
 #     )
-Response = RootModel[Union[Poll, Sky, TPV, Devices, Version, Watch]]
+Response = RootModel[Poll | Sky | TPV | Devices | Version] # | Watch]
