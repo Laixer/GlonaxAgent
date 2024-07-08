@@ -83,7 +83,7 @@ class TPV(BaseModel):
 
 class PRN(BaseModel):
     PRN: int
-    el: float
+    el: float | None = None
     az: float
     ss: float
     used: bool
@@ -94,12 +94,13 @@ class PRN(BaseModel):
 class Sky(BaseModel):
     # class_: Literal["SKY"] = Field(alias="class")
     device: str
-    xdop: float
-    ydop: float
+    xdop: float | None = None
+    ydop: float | None = None
     vdop: float
     tdop: float
     hdop: float
     gdop: float
+    pdop: float
     nSat: int
     uSat: int
     satellites: list[PRN]
