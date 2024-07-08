@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Literal, Optional, Union
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, RootModel, Extra, Field
 
 
 class Mode(IntEnum):
@@ -113,7 +113,14 @@ class Poll(BaseModel):
     sky: list[Sky]
 
 
-class Response(BaseModel):
-    __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
-        discriminator="class_"
-    )
+# class Response(BaseModel):
+#     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
+#         discriminator="class_"
+#     )
+
+
+# class Response(RootModel):
+#     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
+#         discriminator="class_", alias="class"
+#     )
+Response = RootModel[Union[Poll, Sky, TPV, Devices, Version, Watch]]

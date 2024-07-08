@@ -204,7 +204,8 @@ class Session:
         """
         Destructor for the Session class.
         """
-        self.close()
+        # self.close()
+        pass
 
     async def __aenter__(self):
         return self
