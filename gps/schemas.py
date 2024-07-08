@@ -58,8 +58,8 @@ class TPV(BaseModel):
     # class_: Literal["TPV"] = Field(alias="class")
     device: str
     mode: Mode
-    time: datetime
-    ept: float
+    time: datetime | None = None
+    ept: float | None = None
     lat: float | None = None
     lon: float | None = None
     altHAE: float | None = None
