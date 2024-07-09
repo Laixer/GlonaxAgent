@@ -14,7 +14,12 @@ import websockets
 
 from glonax import client as gclient
 from glonax.client import Session
-from glonax.message import Message, ChannelMessageType, ModuleStatus
+from glonax.message import (
+    Message,
+    ChannelMessageType,
+    ModuleStatus,
+    RTCSessionDescription,
+)
 from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
@@ -164,6 +169,33 @@ async def websocket(
                             message = Message(**data)
                             if message.type == ChannelMessageType.COMMAND:
                                 command_channel.put_nowait(message)
+                            elif message.type == ChannelMessageType.PEER:
+                                if message.topic == "offer":
+                                    # TODO: Rewrite everything below
+                                    logger.info("Received WebRTC peer offer")
+
+                                    url = "http://localhost:1984/api/webrtc?src=linux_usbcam"
+                                    response = httpx.post(
+                                        url, json=message.payload.model_dump()
+                                    )
+
+                                    if response.status_code == 200:
+                                        response_data = response.json()
+
+                                        peer = RTCSessionDescription(
+                                            type="answer", sdp=response_data["sdp"]
+                                        )
+                                        await websocket.send(
+                                            Message(
+                                                type=ChannelMessageType.PEER,
+                                                topic="answer",
+                                                payload=peer,
+                                            ).model_dump_json()
+                                        )
+                                    else:
+                                        logger.error(
+                                            f"Request failed with status code: {response.status_code}"
+                                        )
 
                         except json.JSONDecodeError:
                             print("Received raw message:", message)
