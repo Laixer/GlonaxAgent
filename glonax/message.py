@@ -1,5 +1,6 @@
 import struct
 from enum import Enum, IntEnum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -22,7 +23,7 @@ class ControlType(IntEnum):
 
 class Control(BaseModel):
     type: ControlType
-    value: bool
+    value: bool = Field(default=False)
 
     def to_bytes(self):
         return bytes([self.type.value, self.value])
@@ -33,10 +34,10 @@ class Control(BaseModel):
 
 class Instance(BaseModel):
     id: UUID
-    model: str
+    model: str = Field(pattern=r"^[A-Z]{2}\d{3,5}$")
     machine_type: int
     version: tuple[int, int, int]
-    serial_number: str
+    serial_number: str = Field(pattern=r"^[A-Z].\d{5}.[A-Z].\d{5}$")
 
     @property
     def version_string(self):
@@ -80,7 +81,7 @@ class Instance(BaseModel):
 class ModuleStatus(BaseModel):
     name: str
     state: int
-    error_code: int
+    error_code: int = Field(default=0, ge=0, le=255)
 
     def from_bytes(data):
         name_length = struct.unpack(">H", data[0:2])[0]
@@ -107,10 +108,10 @@ class EngineState(IntEnum):
 
 
 class Engine(BaseModel):
-    driver_demand: int
-    actual_engine: int
+    driver_demand: int = Field(default=0, ge=0)
+    actual_engine: int = Field(default=0, ge=0)
     rpm: int = Field(default=0, ge=0, le=8000)
-    state: EngineState
+    state: EngineState = Field(default=EngineState.NOREQUEST)
 
     def request_rpm(rpm: int):
         return Engine(
@@ -178,7 +179,7 @@ class Engine(BaseModel):
 
 
 class RTCSessionDescription(BaseModel):
-    type: str
+    type: str = Literal["offer", "answer"]
     sdp: str
 
 

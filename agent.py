@@ -198,9 +198,9 @@ async def websocket(
                                         )
 
                         except json.JSONDecodeError:
-                            print("Received raw message:", message)
+                            logger.error("Failed to decode JSON message")
                         except ValidationError as e:
-                            print("Validation error:", e)
+                            logger.error(f"Validation error: {e}")
 
                 await asyncio.gather(read_signal_channel(), read_socket())
 
