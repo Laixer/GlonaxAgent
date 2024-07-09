@@ -177,14 +177,20 @@ class Engine(BaseModel):
 #         )
 
 
+class RTCSessionDescription(BaseModel):
+    type: str
+    sdp: str
+
+
 class ChannelMessageType(str, Enum):
     COMMAND = "command"
     SIGNAL = "signal"
     CONTROL = "control"
+    PEER = "peer"
     ERROR = "error"
 
 
 class Message(BaseModel):
     type: ChannelMessageType
     topic: str
-    payload: Control | Instance | ModuleStatus | Engine
+    payload: Control | Instance | ModuleStatus | Engine | RTCSessionDescription
