@@ -174,31 +174,55 @@ async def websocket(
                                 command_channel.put_nowait(message)
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
-                                    # TODO: Rewrite everything below
                                     logger.info("Received WebRTC peer offer")
 
-                                    url = "http://localhost:1984/api/webrtc?src=linux_usbcam"
-                                    response = httpx.post(
-                                        url, json=message.payload.model_dump()
-                                    )
+                                    # TODO: Rewrite everything below
+                                    async with httpx.AsyncClient() as client:
+                                        response = await client.post(
+                                            "http://localhost:1984/api/webrtc?src=linux_usbcam",
+                                            json=message.payload.model_dump(),
+                                        )
 
-                                    if response.status_code == 200:
-                                        response_data = response.json()
+                                        if response.status_code == 200:
+                                            response_data = response.json()
 
-                                        peer = RTCSessionDescription(
-                                            type="answer", sdp=response_data["sdp"]
-                                        )
-                                        await websocket.send(
-                                            Message(
-                                                type=ChannelMessageType.PEER,
-                                                topic="answer",
-                                                payload=peer,
-                                            ).model_dump_json()
-                                        )
-                                    else:
-                                        logger.error(
-                                            f"Request failed with status code: {response.status_code}"
-                                        )
+                                            peer = RTCSessionDescription(
+                                                type="answer", sdp=response_data["sdp"]
+                                            )
+                                            await websocket.send(
+                                                Message(
+                                                    type=ChannelMessageType.PEER,
+                                                    topic="answer",
+                                                    payload=peer,
+                                                ).model_dump_json()
+                                            )
+                                        else:
+                                            logger.error(
+                                                f"Request failed with status code: {response.status_code}"
+                                            )
+
+                                    # url = "http://localhost:1984/api/webrtc?src=linux_usbcam"
+                                    # response = httpx.post(
+                                    #     url, json=message.payload.model_dump()
+                                    # )
+
+                                    # if response.status_code == 200:
+                                    #     response_data = response.json()
+
+                                    #     peer = RTCSessionDescription(
+                                    #         type="answer", sdp=response_data["sdp"]
+                                    #     )
+                                    #     await websocket.send(
+                                    #         Message(
+                                    #             type=ChannelMessageType.PEER,
+                                    #             topic="answer",
+                                    #             payload=peer,
+                                    #         ).model_dump_json()
+                                    #     )
+                                    # else:
+                                    #     logger.error(
+                                    #         f"Request failed with status code: {response.status_code}"
+                                    #     )
 
                         except json.JSONDecodeError:
                             logger.error("Failed to decode JSON message")
