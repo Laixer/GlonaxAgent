@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+# TODO: glonax models strict mode ?
+
 
 class ControlType(IntEnum):
     HYDRAULIC_QUICK_DISCONNECT = 0x5
@@ -33,7 +35,7 @@ class Control(BaseModel):
 
 
 class Instance(BaseModel):
-    id: UUID
+    id: UUID # TODO: frozen=True
     model: str = Field(pattern=r"^[A-Z]{2}\d{3,5}$")
     machine_type: int
     version: tuple[int, int, int]

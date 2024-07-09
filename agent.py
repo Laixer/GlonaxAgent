@@ -166,6 +166,9 @@ async def websocket(
                             message = await websocket.recv()
                             data = json.loads(message)
 
+                            # TODO: Validate JSON data
+                            # Message.model_validate_json(message)
+
                             message = Message(**data)
                             if message.type == ChannelMessageType.COMMAND:
                                 command_channel.put_nowait(message)
