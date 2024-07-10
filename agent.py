@@ -67,6 +67,14 @@ INSTANCE: gclient.Instance | None = None
 instance_event = asyncio.Event()
 
 
+async def remote_address():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://api.ipify.org?format=json")
+        response.raise_for_status()
+
+        logger.info(f"Remote address: {response.json()['ip']}")
+
+
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
@@ -320,6 +328,8 @@ async def gps_handler():
 
 async def main():
     try:
+        await remote_address()
+
         async with asyncio.TaskGroup() as tg:
             signal_channel: Channel[str] = Channel(8)
             comamnd_channel: Channel[str] = Channel(8)
