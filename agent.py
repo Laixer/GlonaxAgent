@@ -160,69 +160,43 @@ async def websocket(
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
 
+                async def create_webrtc_stream(description: RTCSessionDescription):
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post(
+                            "http://localhost:1984/api/webrtc?src=linux_usbcam",
+                            json=description.model_dump(),
+                        )
+
+                        if response.status_code == 200:
+                            response_data = response.json()
+
+                            peer = RTCSessionDescription(
+                                type="answer", sdp=response_data["sdp"]
+                            )
+                            await websocket.send(
+                                Message(
+                                    type=ChannelMessageType.PEER,
+                                    topic="answer",
+                                    payload=peer,
+                                ).model_dump_json()
+                            )
+                        else:
+                            logger.error(
+                                f"Request failed with status code: {response.status_code}"
+                            )
+
                 async def read_socket():
                     while True:
                         try:
                             message = await websocket.recv()
-                            data = json.loads(message)
 
-                            # TODO: Validate JSON data
-                            # Message.model_validate_json(message)
-
-                            message = Message(**data)
+                            message = Message.model_validate_json(message)
                             if message.type == ChannelMessageType.COMMAND:
                                 command_channel.put_nowait(message)
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
                                     logger.info("Received WebRTC peer offer")
-
-                                    # TODO: Rewrite everything below
-                                    async with httpx.AsyncClient() as client:
-                                        response = await client.post(
-                                            "http://localhost:1984/api/webrtc?src=linux_usbcam",
-                                            json=message.payload.model_dump(),
-                                        )
-
-                                        if response.status_code == 200:
-                                            response_data = response.json()
-
-                                            peer = RTCSessionDescription(
-                                                type="answer", sdp=response_data["sdp"]
-                                            )
-                                            await websocket.send(
-                                                Message(
-                                                    type=ChannelMessageType.PEER,
-                                                    topic="answer",
-                                                    payload=peer,
-                                                ).model_dump_json()
-                                            )
-                                        else:
-                                            logger.error(
-                                                f"Request failed with status code: {response.status_code}"
-                                            )
-
-                                    # url = "http://localhost:1984/api/webrtc?src=linux_usbcam"
-                                    # response = httpx.post(
-                                    #     url, json=message.payload.model_dump()
-                                    # )
-
-                                    # if response.status_code == 200:
-                                    #     response_data = response.json()
-
-                                    #     peer = RTCSessionDescription(
-                                    #         type="answer", sdp=response_data["sdp"]
-                                    #     )
-                                    #     await websocket.send(
-                                    #         Message(
-                                    #             type=ChannelMessageType.PEER,
-                                    #             topic="answer",
-                                    #             payload=peer,
-                                    #         ).model_dump_json()
-                                    #     )
-                                    # else:
-                                    #     logger.error(
-                                    #         f"Request failed with status code: {response.status_code}"
-                                    #     )
+                                    await create_webrtc_stream(message.payload)
 
                         except json.JSONDecodeError:
                             logger.error("Failed to decode JSON message")
