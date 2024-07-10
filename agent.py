@@ -89,6 +89,7 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
             async with Session(reader, writer) as session:
                 await session.handshake()
+                logger.info(f"Glonax connected to {path}")
 
                 logger.info(f"Instance ID: {session.instance.id}")
                 logger.info(f"Instance model: {session.instance.model}")
@@ -158,6 +159,7 @@ async def websocket(
             )
             uri = f"{base_url}/{INSTANCE.id}/ws"
             async with websockets.connect(uri) as websocket:
+                logger.info(f"Websocket connected to {uri}")
 
                 async def read_signal_channel():
                     async for message in signal_channel:
