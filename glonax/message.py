@@ -35,7 +35,7 @@ class Control(BaseModel):
 
 
 class Instance(BaseModel):
-    id: UUID # TODO: frozen=True
+    id: UUID  # TODO: frozen=True
     model: str = Field(pattern=r"^[A-Z]{2}\d{3,5}$")
     machine_type: int
     version: tuple[int, int, int]
@@ -196,4 +196,4 @@ class ChannelMessageType(str, Enum):
 class Message(BaseModel):
     type: ChannelMessageType
     topic: str
-    payload: Control | Instance | ModuleStatus | Engine | RTCSessionDescription
+    payload: Control | Instance | ModuleStatus | RTCSessionDescription | Engine
