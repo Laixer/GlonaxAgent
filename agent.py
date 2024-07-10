@@ -358,11 +358,16 @@ if __name__ == "__main__":
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Set the logging level",
     )
+    parser.add_argument(
+        "--config",
+        default="config.ini",
+        help="Specify the configuration file to use",
+    )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
     logging.basicConfig(level=log_level)
 
-    config.read("config.ini")
+    config.read(args.config)
 
     asyncio.run(main())
