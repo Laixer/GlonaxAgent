@@ -111,6 +111,8 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                             await session.writer.control(message.payload)
                         elif message.topic == "engine":
                             await session.writer.engine(message.payload)
+                        elif message.topic == "motion":
+                            await session.writer.motion(message.payload)
 
                 async def read_session():
                     while True:

@@ -278,6 +278,6 @@ class ChannelMessageType(str, Enum):
 class Message(BaseModel):
     type: ChannelMessageType
     topic: str
-    payload: Control | Instance | ModuleStatus | RTCSessionDescription | Engine = Field(
-        union_mode="left_to_right"
-    )
+    payload: (
+        Control | Motion | Instance | ModuleStatus | RTCSessionDescription | Engine
+    ) = Field(union_mode="left_to_right")
