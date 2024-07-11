@@ -149,6 +149,90 @@ class Engine(BaseModel):
         )
 
 
+class MotionType(IntEnum):
+    STOP_ALL = 0x00
+    RESUME_ALL = 0x01
+    RESET_ALL = 0x02
+    STRAIGHT_DRIVE = 0x05
+    CHANGE = 0x10
+
+
+class MotionChangeSet(BaseModel):
+    actuator: int
+    value: int
+
+    def from_bytes(data):
+        actuator = struct.unpack(">H", data[0:2])[0]
+        value = struct.unpack(">h", data[2:4])[0]
+
+        return MotionChangeSet(actuator=actuator, value=value)
+
+    def to_bytes(self):
+        return struct.pack(">H", self.actuator) + struct.pack(">h", self.value)
+
+
+class MotionStraightDrive(BaseModel):
+    value: int
+
+    def from_bytes(data):
+        value = struct.unpack(">h", data[0:2])[0]
+
+        return MotionStraightDrive(value=value)
+
+    def to_bytes(self):
+        return struct.pack(">h", self.value)
+
+
+class Motion(BaseModel):
+    type: MotionType
+    straigh_drive: MotionStraightDrive | None = None
+    change: list[MotionChangeSet] | None = None
+
+    def stop_all():
+        return Motion(type=MotionType.STOP_ALL)
+
+    def resume_all():
+        return Motion(type=MotionType.RESUME_ALL)
+
+    def reset_all():
+        return Motion(type=MotionType.RESET_ALL)
+
+    def straight_drive(value: int):
+        return Motion(
+            type=MotionType.STRAIGHT_DRIVE,
+            straigh_drive=MotionStraightDrive(value=value),
+        )
+
+    def from_bytes(data):
+        type = MotionType(data[0])
+
+        if type == MotionType.CHANGE:
+            change = []
+            offset = 1
+            while offset < len(data):
+                change.append(MotionChangeSet.from_bytes(data[offset : offset + 4]))
+                offset += 4
+            return Motion(type=type, change=change)
+        elif type == MotionType.STRAIGHT_DRIVE:
+            return Motion(
+                type=type, straigh_drive=MotionStraightDrive.from_bytes(data[1:])
+            )
+        else:
+            return Motion(type=type)
+
+    def to_bytes(self):
+        if self.change:
+            return (
+                struct.pack("B", self.type)
+                + struct.pack("B", len(self.change))
+                + b"".join([change.to_bytes() for change in self.change])
+            )
+        elif self.straigh_drive:
+            return struct.pack("B", self.type) + self.straigh_drive.to_bytes()
+        else:
+            return struct.pack("B", self.type)
+
+
 # TODO: Not part of glonax
 # class Gnss(BaseModel):
 #     location: tuple[float, float]

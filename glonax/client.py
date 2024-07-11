@@ -57,23 +57,6 @@ class Packet:
         pass
 
 
-# TODO: Can be removed in the future
-# class EchoFrame(Packet):
-#     def __init__(self):
-#         self.data = randbytes(4)
-
-#     def to_bytes(self):
-#         return self.data
-
-#     def from_bytes(data):
-#         echo = EchoFrame()
-#         echo.data = data
-#         return echo
-
-#     def __eq__(self, __value: object) -> bool:
-#         return self.data == __value.data
-
-
 class SessionFrame(Packet):
     def __init__(self, name):
         self.name = name
@@ -98,6 +81,7 @@ from glonax.message import (
     Engine,
     Message,
     ModuleStatus,
+    Motion,
 )
 
 
@@ -116,6 +100,9 @@ class GlonaxStreamWriter:
         header += b"\x00\x00\x00"
         self.writer.write(header + data)
         await self.writer.drain()
+
+    async def motion(self, motion: Motion):
+        await self.write(MessageType.MOTION, motion.to_bytes())
 
     async def control(self, control: Control):
         await self.write(MessageType.CONTROL, control.to_bytes())
