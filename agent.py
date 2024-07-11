@@ -36,7 +36,7 @@ class MessageChangeDetector:
 
     def process_message(self, message: Message) -> bool:
         has_changed = message != self.last_message or (
-            (time.time() - self.last_message_update) > 15
+            (time.time() - self.last_message_update) > 5
         )
         if has_changed:
             self.last_message = message
@@ -89,10 +89,11 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
             reader, writer = await gclient.open_unix_connection(path)
 
+            # TODO: Wrap in single function
             async with Session(reader, writer) as session:
                 await session.handshake()
-                logger.info(f"Glonax connected to {path}")
 
+                logger.info(f"Glonax connected to {path}")
                 logger.info(f"Instance ID: {session.instance.id}")
                 logger.info(f"Instance model: {session.instance.model}")
                 logger.info(f"Instance type: {session.instance.machine_type}")

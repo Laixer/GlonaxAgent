@@ -3,9 +3,7 @@ from enum import Enum, IntEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
-
-# TODO: glonax models strict mode ?
+from pydantic import BaseModel, Field, field_validator
 
 
 class ControlType(IntEnum):
@@ -25,7 +23,7 @@ class ControlType(IntEnum):
 
 class Control(BaseModel):
     type: ControlType
-    value: bool = Field(default=False)
+    value: bool
 
     def to_bytes(self):
         return bytes([self.type.value, self.value])
@@ -196,4 +194,6 @@ class ChannelMessageType(str, Enum):
 class Message(BaseModel):
     type: ChannelMessageType
     topic: str
-    payload: Control | Instance | ModuleStatus | RTCSessionDescription | Engine
+    payload: Control | Instance | ModuleStatus | RTCSessionDescription | Engine = Field(
+        union_mode="left_to_right"
+    )
