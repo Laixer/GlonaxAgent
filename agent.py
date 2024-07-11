@@ -224,7 +224,7 @@ async def websocket(
         except ChannelClosed:
             logger.error("Websocket channel closed")
             return
-        except websockets.exceptions.ConnectionClosedError:
+        except websockets.exceptions.ConnectionClosed:
             logger.info("Websocket connection closed")
             await asyncio.sleep(1)
         except TimeoutError:
