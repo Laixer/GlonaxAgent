@@ -108,8 +108,10 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                 async def read_command_channel():
                     async for message in command_channel:
                         if message.topic == "control":
+                            logger.info("Sending control message")
                             await session.writer.control(message.payload)
                         elif message.topic == "engine":
+                            logger.info("Sending engine message")
                             await session.writer.engine(message.payload)
                         elif message.topic == "motion":
                             await session.writer.motion(message.payload)
@@ -288,7 +290,7 @@ async def update_telemetry():
                 )
                 data = host_config.model_dump()
 
-                if random.randint(1, 15) == 1:
+                if random.randint(1, 25) == 1:
                     response = await client.put(f"/{INSTANCE.id}/host", json=data)
                     response.raise_for_status()
 
