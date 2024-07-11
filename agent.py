@@ -38,8 +38,9 @@ class MessageChangeDetector:
         has_changed = message != self.last_message or (
             (time.time() - self.last_message_update) > 15
         )
-        self.last_message = message
-        self.last_message_update = time.time()
+        if has_changed:
+            self.last_message = message
+            self.last_message_update = time.time()
         return has_changed
 
     def get_last_message(self) -> Message | None:
@@ -55,10 +56,11 @@ class StatusChangeDetector:
         last_update = self.last_status_update.get(status.name, 0)
         has_changed = (
             status != self.last_status.get(status.name)
-            or (time.time() - last_update) > 15
+            or (time.time() - last_update) > 5
         )
-        self.last_status[status.name] = status
-        self.last_status_update[status.name] = time.time()
+        if has_changed:
+            self.last_status[status.name] = status
+            self.last_status_update[status.name] = time.time()
         return has_changed
 
 
