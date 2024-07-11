@@ -215,6 +215,8 @@ async def websocket(
                                     logger.info("Received WebRTC peer offer")
                                     await create_webrtc_stream(message.payload)
 
+                        except ChannelFull:
+                            logger.warning("Websocket command channel is full")
                         except json.JSONDecodeError:
                             logger.error("Failed to decode JSON message")
                         except ValidationError as e:
