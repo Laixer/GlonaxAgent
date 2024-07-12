@@ -177,14 +177,18 @@ async def websocket(
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
 
-                async def create_webrtc_stream(description: RTCSessionDescription):
+                async def create_webrtc_stream(
+                    description: RTCSessionDescription, name: str
+                ):
                     async with httpx.AsyncClient() as client:
-                        response = await client.post(
-                            "http://localhost:1984/api/webrtc?src=linux_usbcam",
-                            json=description.model_dump(),
-                        )
+                        try:
+                            go2rtc_base_url = "http://localhost:1984/api"
+                            response = await client.post(
+                                f"{go2rtc_base_url}/webrtc?src={name}",
+                                json=description.model_dump(),
+                            )
+                            response.raise_for_status()
 
-                        if response.status_code == 200:
                             response_data = response.json()
 
                             peer = RTCSessionDescription(
@@ -197,10 +201,15 @@ async def websocket(
                                     payload=peer,
                                 ).model_dump_json()
                             )
-                        else:
-                            logger.error(
-                                f"Request failed with status code: {response.status_code}"
-                            )
+
+                        except (
+                            httpx.HTTPStatusError,
+                            httpx.ConnectTimeout,
+                            httpx.ConnectError,
+                        ) as e:
+                            logger.error(f"HTTP Error: {e}")
+                        except Exception as e:
+                            logger.error(f"Unknown error: {e}")
 
                 async def read_socket():
                     while True:
@@ -213,7 +222,9 @@ async def websocket(
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
                                     logger.info("Received WebRTC peer offer")
-                                    await create_webrtc_stream(message.payload)
+                                    await create_webrtc_stream(
+                                        message.payload, "linux_usbcam"
+                                    )
 
                         except ChannelFull:
                             logger.warning("Websocket command channel is full")
