@@ -71,10 +71,20 @@ instance_event = asyncio.Event()
 
 async def remote_address():
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://api.ipify.org?format=json")
-        response.raise_for_status()
+        try:
+            response = await client.get("https://api.ipify.org?format=json")
+            response.raise_for_status()
 
-        logger.info(f"Remote address: {response.json()['ip']}")
+            logger.info(f"Remote address: {response.json()['ip']}")
+
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.error(f"Unknown error: {e}")
 
 
 async def create_webrtc_stream(description: RTCSessionDescription, name: str):
