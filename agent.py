@@ -180,7 +180,7 @@ async def websocket(
                 async def create_webrtc_stream(
                     description: RTCSessionDescription, name: str
                 ):
-                    async with httpx.AsyncClient() as client:
+                    async with httpx.AsyncClient(timeout=1.0) as client:
                         try:
                             go2rtc_base_url = "http://localhost:1984/api"
                             response = await client.post(
@@ -188,7 +188,6 @@ async def websocket(
                                 json=description.model_dump(),
                             )
                             response.raise_for_status()
-
                             response_data = response.json()
 
                             peer = RTCSessionDescription(
