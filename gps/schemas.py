@@ -5,10 +5,10 @@ from pydantic import BaseModel, RootModel, Extra, Field
 
 
 class Mode(IntEnum):
-    unknown = 0
-    no_fix = 1
-    two_d_fix = 2
-    three_d_fix = 3
+    UNKNOWN = 0
+    NO_FIX = 1
+    TWO_D_FIX = 2
+    THREE_D_FIX = 3
 
 
 class Watch(BaseModel):
@@ -100,8 +100,8 @@ class Sky(BaseModel):
     hdop: float | None = None
     gdop: float | None = None
     pdop: float | None = None
-    nSat: int
-    uSat: int
+    nsat: int
+    usat: int
     satellites: list[PRN] | None = None
 
 

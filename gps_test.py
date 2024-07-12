@@ -10,6 +10,7 @@ async def main():
     async with client.GpsdClient(HOST, PORT) as client:
         print(await client.poll())  # Get gpsd POLL response
         while True:
+            print("")
             print(await client.get_result())  # Get gpsd TPV responses
 
 
