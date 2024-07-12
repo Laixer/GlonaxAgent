@@ -100,8 +100,8 @@ class Sky(BaseModel):
     hdop: float | None = None
     gdop: float | None = None
     pdop: float | None = None
-    nsat: int
-    usat: int
+    nsat: int = Field(alias="nSat")
+    usat: int = Field(alias="uSat")
     satellites: list[PRN] | None = None
 
 

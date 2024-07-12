@@ -2,6 +2,7 @@ import datetime
 from pydantic import BaseModel
 
 
+# TODO: Rename to HostTelemetry
 class Telemetry(BaseModel):
     memory_used: float
     disk_used: float
@@ -9,6 +10,14 @@ class Telemetry(BaseModel):
     cpu_load: tuple[float, float, float]
     uptime: int
     created_at: datetime.timedelta | None = None
+
+
+class GpsTelemetry(BaseModel):
+    mode: int
+    lat: float | None = None
+    lon: float | None = None
+    alt: float | None = None
+    speed: float | None = None
 
 
 class HostConfig(BaseModel):
