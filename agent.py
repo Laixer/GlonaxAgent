@@ -77,6 +77,33 @@ async def remote_address():
         logger.info(f"Remote address: {response.json()['ip']}")
 
 
+async def create_webrtc_stream(description: RTCSessionDescription, name: str):
+    async with httpx.AsyncClient(timeout=1.0) as client:
+        try:
+            go2rtc_base_url = "http://localhost:1984/api"
+            response = await client.post(
+                f"{go2rtc_base_url}/webrtc?src={name}", json=description.model_dump()
+            )
+            response.raise_for_status()
+            response_data = response.json()
+
+            peer = RTCSessionDescription(type="answer", sdp=response_data["sdp"])
+            await websocket.send(
+                Message(
+                    type=ChannelMessageType.PEER, topic="answer", payload=peer
+                ).model_dump_json()
+            )
+
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.error(f"Unknown error: {e}")
+
+
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
@@ -177,39 +204,6 @@ async def websocket(
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
 
-                async def create_webrtc_stream(
-                    description: RTCSessionDescription, name: str
-                ):
-                    async with httpx.AsyncClient(timeout=1.0) as client:
-                        try:
-                            go2rtc_base_url = "http://localhost:1984/api"
-                            response = await client.post(
-                                f"{go2rtc_base_url}/webrtc?src={name}",
-                                json=description.model_dump(),
-                            )
-                            response.raise_for_status()
-                            response_data = response.json()
-
-                            peer = RTCSessionDescription(
-                                type="answer", sdp=response_data["sdp"]
-                            )
-                            await websocket.send(
-                                Message(
-                                    type=ChannelMessageType.PEER,
-                                    topic="answer",
-                                    payload=peer,
-                                ).model_dump_json()
-                            )
-
-                        except (
-                            httpx.HTTPStatusError,
-                            httpx.ConnectTimeout,
-                            httpx.ConnectError,
-                        ) as e:
-                            logger.error(f"HTTP Error: {e}")
-                        except Exception as e:
-                            logger.error(f"Unknown error: {e}")
-
                 async def read_socket():
                     while True:
                         try:
@@ -221,8 +215,9 @@ async def websocket(
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
                                     logger.info("Received WebRTC peer offer")
+                                    default_camera = "linux_usbcam"
                                     await create_webrtc_stream(
-                                        message.payload, "linux_usbcam"
+                                        message.payload, default_camera
                                     )
 
                         except ChannelFull:
