@@ -74,8 +74,9 @@ async def remote_address():
         try:
             response = await client.get("https://api.ipify.org?format=json")
             response.raise_for_status()
+            response_data = response.json()
 
-            logger.info(f"Remote address: {response.json()['ip']}")
+            logger.info(f"Remote address: {response_data['ip']}")
 
         except (
             httpx.HTTPStatusError,
@@ -117,12 +118,13 @@ async def create_webrtc_stream(description: RTCSessionDescription, name: str):
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
-    logger.info("Starting Glonax task")
+    logger.info("Starting glonax task")
+
+    path = config["glonax"]["unix_socket"]
 
     while True:
         try:
-            path = config["glonax"]["unix_socket"]
-            logger.info(f"Connecting to Glonax at {path}")
+            logger.info(f"Connecting to glonax at {path}")
 
             reader, writer = await gclient.open_unix_connection(path)
 
@@ -173,10 +175,11 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
             return
         except asyncio.IncompleteReadError as e:
             logger.error("Glonax disconnected")
-            await asyncio.sleep(1)
         except ConnectionError as e:
             logger.error(f"Glonax connection error: {e}")
-            await asyncio.sleep(1)
+
+        logger.info("Reconnecting glonax...")
+        await asyncio.sleep(1)
 
 
 async def websocket(
@@ -193,15 +196,18 @@ async def websocket(
     engine_detector = MessageChangeDetector()
     status_detector = StatusChangeDetector()
 
+    base_url = (
+        config["server"]["base_url"]
+        .replace("http://", "ws://")
+        .replace("https://", "wss://")
+        .rstrip("/")
+    )
+    uri = f"{base_url}/{INSTANCE.id}/ws"
+
     while True:
         try:
-            base_url = (
-                config["server"]["base_url"]
-                .replace("http://", "ws://")
-                .replace("https://", "wss://")
-                .rstrip("/")
-            )
-            uri = f"{base_url}/{INSTANCE.id}/ws"
+            logger.info(f"Connecting to websocket at {uri}")
+
             async with websockets.connect(uri) as websocket:
                 logger.info(f"Websocket connected to {uri}")
 
@@ -219,6 +225,7 @@ async def websocket(
                         try:
                             message = await websocket.recv()
 
+                            # TODO: Dont let pydantic determine the payload type
                             message = Message.model_validate_json(message)
                             if message.type == ChannelMessageType.COMMAND:
                                 command_channel.put_nowait(message)
@@ -245,18 +252,17 @@ async def websocket(
         except ChannelClosed:
             logger.error("Websocket channel closed")
             return
-        except websockets.exceptions.ConnectionClosed:
+        except websockets.ConnectionClosed:
             logger.info("Websocket connection closed")
-            await asyncio.sleep(1)
         except TimeoutError:
             logger.error("Websocket connection timed out")
-            await asyncio.sleep(1)
         except ConnectionResetError:
             logger.error("Websocket connection reset")
-            await asyncio.sleep(1)
         except ConnectionRefusedError:
             logger.error("Websocket connection refused")
-            await asyncio.sleep(1)
+
+        logger.info("Reconnecting websocket...")
+        await asyncio.sleep(1)
 
 
 async def update_telemetry():
