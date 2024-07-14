@@ -262,6 +262,7 @@ class Motion(BaseModel):
 #         )
 
 
+# TODO: Not part of glonax
 class RTCSessionDescription(BaseModel):
     type: str = Literal["offer", "answer"]
     sdp: str
