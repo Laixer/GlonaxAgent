@@ -106,7 +106,9 @@ async def remote_address():
             logger.error(f"Unknown error: {e}")
 
 
-async def create_webrtc_stream(description: RTCSessionDescription, name: str):
+async def create_webrtc_stream(
+    description: RTCSessionDescription, name: str
+) -> Message:
     async with httpx.AsyncClient() as client:
         try:
             go2rtc_base_url = "http://localhost:1984/api"
@@ -117,11 +119,7 @@ async def create_webrtc_stream(description: RTCSessionDescription, name: str):
             response_data = response.json()
 
             peer = RTCSessionDescription(type="answer", sdp=response_data["sdp"])
-            await websocket.send(
-                Message(
-                    type=ChannelMessageType.PEER, topic="answer", payload=peer
-                ).model_dump_json()
-            )
+            return Message(type=ChannelMessageType.PEER, topic="answer", payload=peer)
 
         except (
             httpx.HTTPStatusError,
@@ -255,12 +253,12 @@ async def websocket(
                                     command_channel.put_nowait(message)
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
-                                    logger.info("Received WebRTC peer offer")
+                                    logger.info("Received RTC peer offer")
                                     default_camera = "linux_usbcam"
-                                    await create_webrtc_stream(
+                                    answer = await create_webrtc_stream(
                                         message.payload, default_camera
                                     )
-                                    # TODO: Return with answer
+                                    await websocket.send(answer.model_dump_json())
 
                         except ChannelFull:
                             logger.warning("Websocket command channel is full")
