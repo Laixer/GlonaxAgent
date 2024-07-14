@@ -107,7 +107,7 @@ async def remote_address():
 
 
 async def create_webrtc_stream(description: RTCSessionDescription, name: str):
-    async with httpx.AsyncClient(timeout=1.0) as client:
+    async with httpx.AsyncClient() as client:
         try:
             go2rtc_base_url = "http://localhost:1984/api"
             response = await client.post(
@@ -260,6 +260,7 @@ async def websocket(
                                     await create_webrtc_stream(
                                         message.payload, default_camera
                                     )
+                                    # TODO: Return with answer
 
                         except ChannelFull:
                             logger.warning("Websocket command channel is full")
