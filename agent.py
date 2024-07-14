@@ -23,6 +23,7 @@ from glonax.message import (
 from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
+from process import proc_reboot, proc_service_restart
 
 
 config = configparser.ConfigParser()
@@ -245,7 +246,13 @@ async def websocket(
                             # TODO: Dont let pydantic determine the payload type
                             message = Message.model_validate_json(message)
                             if message.type == ChannelMessageType.COMMAND:
-                                command_channel.put_nowait(message)
+                                if message.topic == "process":
+                                    logger.info("Received process command")
+                                    # await proc_reboot()
+                                    # await proc_service_restart("glonax")
+                                    # TODO: Add process command handler
+                                else:
+                                    command_channel.put_nowait(message)
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
                                     logger.info("Received WebRTC peer offer")
