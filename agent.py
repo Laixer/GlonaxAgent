@@ -29,6 +29,23 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        "DEBUG": "\033[38;21m",
+        "INFO": "\033[32m",
+        "WARNING": "\033[33;1m",
+        "ERROR": "\033[31;1m",
+        "CRITICAL": "\033[31;1m",
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        log_color = self.COLORS.get(record.levelname, self.RESET)
+        log_fmt = f"%(asctime)s | {log_color}%(levelname)8s{self.RESET} | %(message)s"
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 class MessageChangeDetector:
     def __init__(self):
         self.last_message: Message | None = None
@@ -396,7 +413,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
-    logging.basicConfig(level=log_level)
+    logger.setLevel(log_level)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColorFormatter())
+    logger.addHandler(handler)
 
     config.read(args.config)
 
