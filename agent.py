@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 from process import proc_reboot, proc_service_restart
-
+from systemd import journal
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -253,7 +253,7 @@ async def websocket(
                                     command_channel.put_nowait(message)
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
-                                    logger.info("Received RTC peer offer")
+                                    logger.info("RTC Offer: Creating peer connection")
                                     default_camera = "linux_usbcam"
                                     answer = await create_webrtc_stream(
                                         message.payload, default_camera
@@ -423,7 +423,9 @@ if __name__ == "__main__":
 
     handler = logging.StreamHandler()
     handler.setFormatter(ColorFormatter())
-    logger.addHandler(handler)
+    # logger.addHandler(handler)
+
+    logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
 
     config.read(args.config)
 
