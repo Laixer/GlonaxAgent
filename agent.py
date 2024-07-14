@@ -412,6 +412,11 @@ if __name__ == "__main__":
         help="Set the logging level",
     )
     parser.add_argument(
+        "--log-systemd",
+        action="store_true",
+        help="Enable logging to systemd journal",
+    )
+    parser.add_argument(
         "--config",
         default="config.ini",
         help="Specify the configuration file to use",
@@ -421,11 +426,12 @@ if __name__ == "__main__":
     log_level = logging.getLevelName(args.log_level.upper())
     logger.setLevel(log_level)
 
-    handler = logging.StreamHandler()
-    handler.setFormatter(ColorFormatter())
-    # logger.addHandler(handler)
-
-    logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
+    if args.log_systemd:
+        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
+    else:
+        handler = logging.StreamHandler()
+        handler.setFormatter(ColorFormatter())
+        logger.addHandler(handler)
 
     config.read(args.config)
 
