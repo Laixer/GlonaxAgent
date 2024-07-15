@@ -255,6 +255,15 @@ class Session:
                 payload=engine,
             )
             return message
+        elif message_type == MessageType.MOTION:
+            motion = Motion.from_bytes(message)
+
+            message = Message(
+                type=ChannelMessageType.SIGNAL,
+                topic="motion",
+                payload=motion,
+            )
+            return message
         else:
             # TODO: Why not raise an exception here?
             return None
