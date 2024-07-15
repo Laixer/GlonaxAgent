@@ -235,6 +235,8 @@ async def websocket(
                         elif message.topic == "status":
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
+                        elif message.topic == "motion":
+                            await websocket.send(message.model_dump_json())
 
                 async def read_socket():
                     while True:
