@@ -8,7 +8,6 @@ import configparser
 import argparse
 import httpx
 import psutil
-import json
 import asyncio
 import websockets
 
@@ -266,8 +265,6 @@ async def websocket(
 
                         except ChannelFull:
                             logger.warning("Websocket command channel is full")
-                        except json.JSONDecodeError:
-                            logger.error("Failed to decode JSON message")
                         except ValidationError as e:
                             logger.error(f"Validation error: {e}")
 
