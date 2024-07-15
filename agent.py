@@ -257,11 +257,23 @@ async def websocket(
                             elif message.type == ChannelMessageType.PEER:
                                 if message.topic == "offer":
                                     logger.info("RTC Offer: Creating peer connection")
+                                    offer = message.payload
+
                                     default_camera = "linux_usbcam"
                                     answer = await create_webrtc_stream(
-                                        message.payload, default_camera
+                                        offer, default_camera
                                     )
                                     await websocket.send(answer.model_dump_json())
+
+                                    # peer_connection = RTCPeerConnection()
+
+                                    # await peer_connection.setRemoteDescription(offer)
+
+                                    # answer = await peer_connection.createAnswer()
+                                    # await peer_connection.setLocalDescription(answer)
+                                    # await websocket.send(
+                                    #     peer_connection.localDescription
+                                    # )
 
                         except ChannelFull:
                             logger.warning("Websocket command channel is full")
