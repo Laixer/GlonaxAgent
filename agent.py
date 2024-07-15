@@ -210,6 +210,7 @@ async def websocket(
     logger.info("Starting websocket task")
 
     engine_detector = MessageChangeDetector()
+    motion_detector = MessageChangeDetector()
     status_detector = StatusChangeDetector()
 
     base_url = (
@@ -236,8 +237,8 @@ async def websocket(
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
                         elif message.topic == "motion":
-                            # TODO: Need a change detector for motion messages
-                            await websocket.send(message.model_dump_json())
+                            if motion_detector.process_message(message):
+                                await websocket.send(message.model_dump_json())
 
                 async def read_socket():
                     while True:
