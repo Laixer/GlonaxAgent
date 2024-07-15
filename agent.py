@@ -236,6 +236,7 @@ async def websocket(
                             if status_detector.process_status(message.payload):
                                 await websocket.send(message.model_dump_json())
                         elif message.topic == "motion":
+                            # TODO: Need a change detector for motion messages
                             await websocket.send(message.model_dump_json())
 
                 async def read_socket():
