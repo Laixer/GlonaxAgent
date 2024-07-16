@@ -24,16 +24,6 @@ class JSONRPCResponse:
         return json.dumps(self.__dict__)
 
 
-# {
-#   "jsonrpc": "2.0",
-#   "error": {
-#     "code": -32600,
-#     "message": "Invalid Request"
-#   },
-#   "id": 1
-# }
-
-
 class JSONRPCError:
     def __init__(self, id: int, code: int, message: str, jsonrpc: str = "2.0"):
         self.code = code
@@ -42,10 +32,16 @@ class JSONRPCError:
         self.jsonrpc = jsonrpc
 
     def json(self):
-        return json.dumps(self.__dict__)
+        return json.dumps(
+            {
+                "jsonrpc": self.jsonrpc,
+                "error": {"code": self.code, "message": self.message},
+                "id": self.id,
+            }
+        )
 
 
-async def handle(
+async def invoke(
     callables: list, input: str | dict
 ) -> JSONRPCResponse | JSONRPCError | None:
     try:

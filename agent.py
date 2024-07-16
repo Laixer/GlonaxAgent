@@ -276,13 +276,34 @@ async def websocket(
                 def rpc_echo(input):
                     return input
 
-                async def jsonrpc_handler():
-                    while True:
-                        callables = []
-                        callables.append(rpc_echo)
+                def rpc_reboot():
+                    # proc_reboot()
+                    pass
 
+                def rpc_systemctl(operation: str, service: str):
+                    # services = ["glonax", "glonax-agent", "glonax-inpput"]
+                    # if service in services:
+                    #     proc_service_restart(service_name)
+                    pass
+
+                def rpc_apt(operation: str, package: str):
+                    pass
+
+                def rpc_setup_rtc(offer: RTCSessionDescription):
+                    pass
+
+                async def jsonrpc_handler():
+                    callables = [
+                        rpc_echo,
+                        rpc_reboot,
+                        rpc_systemctl,
+                        rpc_apt,
+                        rpc_setup_rtc,
+                    ]
+
+                    while True:
                         message = await websocket.recv()
-                        response = await rpc.handle(callables, message)
+                        response = await rpc.invoke(callables, message)
                         if response is not None:
                             await websocket.send(response.json())
 
