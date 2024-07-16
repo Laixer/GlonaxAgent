@@ -2,6 +2,7 @@
 
 import json
 import os
+import pickle
 import time
 import logging
 import random
@@ -158,6 +159,9 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
                 INSTANCE = session.instance
                 instance_event.set()
+
+                with open("instance.dat", "wb") as f:
+                    pickle.dump(session.instance, f)
 
                 logger.debug("Instance event set")
 
