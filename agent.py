@@ -14,7 +14,6 @@ import asyncio
 import websockets
 
 from glonax import client as gclient
-from glonax.client import Session
 from glonax.message import (
     Message,
     ChannelMessageType,
@@ -27,6 +26,8 @@ from models import HostConfig, Telemetry
 from process import proc_reboot, proc_service_restart
 from systemd import journal
 from aiortc import RTCPeerConnection
+
+import rpc
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -47,27 +48,6 @@ class ColorFormatter(logging.Formatter):
         log_fmt = f"%(asctime)s | {log_color}%(levelname)8s{self.RESET} | %(message)s"
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
-
-
-class JSONRPCRequest:
-    def __init__(self, method: str, params, id: int, jsonrpc: str = "2.0"):
-        self.method = method
-        self.params = params
-        self.id = id
-        self.jsonrpc = jsonrpc
-
-    def json(self):
-        return json.dumps(self.__dict__)
-
-
-class JSONRPCResponse:
-    def __init__(self, result, id: int, jsonrpc: str = "2.0"):
-        self.result = result
-        self.id = id
-        self.jsonrpc = jsonrpc
-
-    def json(self):
-        return json.dumps(self.__dict__)
 
 
 class MessageChangeDetector:
@@ -292,6 +272,15 @@ async def websocket(
                         elif message.topic == "motion":
                             if motion_detector.process_message(message):
                                 await websocket.send(message.model_dump_json())
+
+                async def jsonrpc_handler():
+                    while True:
+                        message = await websocket.recv()
+
+                        callables = []
+                        response = await rpc.handle(callables, message)
+                        if response is not None:
+                            await websocket.send(response.json())
 
                 async def read_socket():
                     while True:
