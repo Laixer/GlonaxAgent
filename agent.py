@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import time
 import logging
@@ -24,6 +25,7 @@ from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 from process import proc_reboot, proc_service_restart
 from systemd import journal
+from aiortc import RTCPeerConnection
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -195,6 +197,37 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
 
         logger.info("Reconnecting glonax...")
         await asyncio.sleep(1)
+
+
+async def glonax_p2p(
+    peer_connection: RTCPeerConnection,
+    signal_channel: Channel[Message],
+    command_channel: Channel[Message],
+):
+    # TODO: This is where we open a glonax channel
+    # TODO: This is where we open video and audio channels
+
+    @peer_connection.on("datachannel")
+    def on_datachannel(channel):
+        logger.info(f"{channel.label}: created by remote party")
+
+        @channel.on("message")
+        def on_message(message):
+            logger.info(f"{channel.label}: message: {message}")
+
+            # TODO: message is always json, so we can parse it
+            # TODO: We can then send it to the glonax
+
+            if isinstance(message, str) and message.startswith("ping"):
+                channel.send("pong" + message[4:])
+
+    # TODO: Keep listening on glonax channel
+    while True:
+        try:
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            logger.info("P2P task cancelled")
+            return
 
 
 async def websocket(
