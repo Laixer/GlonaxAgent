@@ -42,6 +42,26 @@ class JSONRPCError:
         return json.dumps(self.as_dict())
 
 
+class JSONRPCInvalidRequest(JSONRPCError):
+    def __init__(self, id: int):
+        super().__init__(id, -32600, message="Invalid Request", jsonrpc="2.0")
+
+
+class JSONRPCMethodNotFound(JSONRPCError):
+    def __init__(self, id: int):
+        super().__init__(id, -32601, message="Method not found", jsonrpc="2.0")
+
+
+class JSONRPCParseError(JSONRPCError):
+    def __init__(self):
+        super().__init__(0, -32700, message="Parse error", jsonrpc="2.0")
+
+
+class JSONRPCInvalidParams(JSONRPCError):
+    def __init__(self, id: int):
+        super().__init__(id, -32602, message="Invalid params", jsonrpc="2.0")
+
+
 async def invoke(
     callables: set, input: str | dict
 ) -> JSONRPCResponse | JSONRPCError | None:
@@ -50,12 +70,12 @@ async def invoke(
         if isinstance(input, str):
             data = json.loads(input)
 
-        if "method" not in data or "params" not in data:
-            return JSONRPCError(0, -32600, "Invalid Request")
+        if "method" not in data or "params" not in data or "jsonrpc" not in data:
+            return JSONRPCInvalidRequest(0)
 
         request = JSONRPCRequest(**data)
         if request.jsonrpc != "2.0":
-            return JSONRPCError(request.id, -32600, "Invalid Request")
+            return JSONRPCInvalidRequest(request.id)
 
         for callable in callables:
             if request.method.lower() == callable.__name__:
@@ -68,12 +88,12 @@ async def invoke(
                 response = JSONRPCResponse(result, request.id)
                 return response
 
-        return JSONRPCError(request.id, -32601, "Method not found")
+        return JSONRPCMethodNotFound(request.id)
 
     except json.JSONDecodeError:
-        return JSONRPCError(0, -32700, "Parse error")
+        return JSONRPCParseError()
     except TypeError:
-        return JSONRPCError(0, -32602, "Invalid params")
+        return JSONRPCInvalidParams(0)
     except Exception:
         return JSONRPCError(0, -32603, "Internal error")
 
