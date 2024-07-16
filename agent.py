@@ -273,11 +273,15 @@ async def websocket(
                             if motion_detector.process_message(message):
                                 await websocket.send(message.model_dump_json())
 
+                def rpc_echo(input):
+                    return input
+
                 async def jsonrpc_handler():
                     while True:
-                        message = await websocket.recv()
-
                         callables = []
+                        callables.append(rpc_echo)
+
+                        message = await websocket.recv()
                         response = await rpc.handle(callables, message)
                         if response is not None:
                             await websocket.send(response.json())
