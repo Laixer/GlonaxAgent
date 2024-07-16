@@ -49,6 +49,27 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+class JSONRPCRequest:
+    def __init__(self, method: str, params, id: int, jsonrpc: str = "2.0"):
+        self.method = method
+        self.params = params
+        self.id = id
+        self.jsonrpc = jsonrpc
+
+    def json(self):
+        return json.dumps(self.__dict__)
+
+
+class JSONRPCResponse:
+    def __init__(self, result, id: int, jsonrpc: str = "2.0"):
+        self.result = result
+        self.id = id
+        self.jsonrpc = jsonrpc
+
+    def json(self):
+        return json.dumps(self.__dict__)
+
+
 class MessageChangeDetector:
     def __init__(self):
         self.last_message: Message | None = None
@@ -136,6 +157,7 @@ async def create_webrtc_stream(
             logger.error(f"Unknown error: {e}")
 
 
+# TODO: Should only connect once
 async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
     global INSTANCE, instance_event
 
