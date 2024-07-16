@@ -85,6 +85,7 @@ from glonax.message import (
 )
 
 
+# TODO: Move to exceptions.py
 class ProtocolError(Exception):
     pass
 
@@ -93,6 +94,7 @@ class GlonaxStreamWriter:
     def __init__(self, writer: asyncio.StreamWriter):
         self.writer = writer
 
+    # TODO: Maybe move the actual encoding to the `Frame` class
     async def write(self, type: MessageType, data: bytes):
         header = b"LXR\x03"
         header += struct.pack("B", type.value)
@@ -112,10 +114,28 @@ class GlonaxStreamWriter:
 
 
 class GlonaxStreamReader:
+    """
+    A class that represents a Glonax stream reader.
+
+    This class is responsible for reading messages from a stream using the Glonax protocol.
+
+    Args:
+        reader (asyncio.StreamReader): The stream reader to read from.
+
+    Attributes:
+        reader (asyncio.StreamReader): The stream reader to read from.
+    """
+
     def __init__(self, reader: asyncio.StreamReader):
         self.reader = reader
 
     async def read(self) -> tuple[MessageType, bytes]:
+        """
+        Reads a message from the stream.
+
+        Returns:
+            tuple[MessageType, bytes]: A tuple containing the message type and the message data.
+        """
         header = await self.reader.readexactly(10)
         if header[:3] != b"LXR":
             raise ProtocolError("Invalid header received")
@@ -263,6 +283,24 @@ class Session:
                     payload=motion,
                 )
                 return message
+
+    async def motion_stop_all(self):
+        """
+        Sends a control message to stop all motion.
+
+        Returns:
+            None
+        """
+        await self.writer.motion(Motion.stop_all())
+
+    async def motion_resume_all(self):
+        """
+        Sends a control message to resume all motion.
+
+        Returns:
+            None
+        """
+        await self.writer.motion(Motion.resume_all())
 
     async def machine_horn(self, value: bool):
         """
