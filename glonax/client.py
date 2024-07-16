@@ -3,6 +3,18 @@ import logging
 import asyncio
 from enum import Enum
 
+from glonax import DEFAULT_USER_AGENT
+from glonax.message import (
+    ChannelMessageType,
+    Control,
+    ControlType,
+    Instance,
+    Engine,
+    Message,
+    ModuleStatus,
+    Motion,
+)
+from glonax.exceptions import ProtocolError
 
 logger = logging.getLogger(__name__)
 
@@ -42,22 +54,14 @@ class MessageType(Enum):
     SIGNAL = 0x31
     ACTOR = 0x40
     VMS = 0x41  # TODO: Remove this message type
-    GNSS = 0x42  # TODO: Remove this message type
+    GNSS = 0x42
     ENGINE = 0x43
     TARGET = 0x44
     CONTROL = 0x45
     ROTATOR = 0x46
 
 
-class Packet:
-    def to_bytes(self):
-        pass
-
-    def from_bytes(data):
-        pass
-
-
-class SessionFrame(Packet):
+class SessionFrame:
     def __init__(self, name):
         self.name = name
 
@@ -72,30 +76,28 @@ class SessionFrame(Packet):
         return SessionFrame(name)
 
 
-from glonax import DEFAULT_USER_AGENT
-from glonax.message import (
-    ChannelMessageType,
-    Control,
-    ControlType,
-    Instance,
-    Engine,
-    Message,
-    ModuleStatus,
-    Motion,
-)
-
-
-# TODO: Move to exceptions.py
-class ProtocolError(Exception):
-    pass
-
-
 class GlonaxStreamWriter:
+    """
+    A class that represents a Glonax stream writer.
+
+    This class provides methods to write different types of messages to a stream.
+
+    Args:
+        writer (asyncio.StreamWriter): The stream writer to write the messages to.
+    """
+
     def __init__(self, writer: asyncio.StreamWriter):
         self.writer = writer
 
     # TODO: Maybe move the actual encoding to the `Frame` class
     async def write(self, type: MessageType, data: bytes):
+        """
+        Writes a message to the stream.
+
+        Args:
+            type (MessageType): The type of the message.
+            data (bytes): The data of the message.
+        """
         header = b"LXR\x03"
         header += struct.pack("B", type.value)
         header += struct.pack(">H", len(data))
@@ -104,12 +106,30 @@ class GlonaxStreamWriter:
         await self.writer.drain()
 
     async def motion(self, motion: Motion):
+        """
+        Writes a motion message to the stream.
+
+        Args:
+            motion (Motion): The motion message to write.
+        """
         await self.write(MessageType.MOTION, motion.to_bytes())
 
     async def control(self, control: Control):
+        """
+        Writes a control message to the stream.
+
+        Args:
+            control (Control): The control message to write.
+        """
         await self.write(MessageType.CONTROL, control.to_bytes())
 
     async def engine(self, engine: Engine):
+        """
+        Writes an engine message to the stream.
+
+        Args:
+            engine (Engine): The engine message to write.
+        """
         await self.write(MessageType.ENGINE, engine.to_bytes())
 
 
