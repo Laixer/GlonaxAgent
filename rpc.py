@@ -63,7 +63,7 @@ class JSONRPCInvalidParams(JSONRPCError):
 
 
 async def invoke(
-    callables: set, input: str | dict
+    callables: set, input: str | dict, prefix: str = "rpc_"
 ) -> JSONRPCResponse | JSONRPCError | None:
     try:
         data = input
@@ -78,7 +78,8 @@ async def invoke(
             return JSONRPCInvalidRequest(request.id)
 
         for callable in callables:
-            if request.method.lower() == callable.__name__:
+            method = request.method.strip()
+            if method == callable.__name__ or prefix + method == callable.__name__:
                 if asyncio.iscoroutinefunction(callable):
                     result = await callable(*request.params)
                 else:
