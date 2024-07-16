@@ -293,13 +293,15 @@ async def websocket(
                     pass
 
                 async def jsonrpc_handler():
-                    callables = [
-                        rpc_echo,
-                        rpc_reboot,
-                        rpc_systemctl,
-                        rpc_apt,
-                        rpc_setup_rtc,
-                    ]
+                    callables = set(
+                        [
+                            rpc_echo,
+                            rpc_reboot,
+                            rpc_systemctl,
+                            rpc_apt,
+                            rpc_setup_rtc,
+                        ]
+                    )
 
                     while True:
                         message = await websocket.recv()

@@ -31,23 +31,27 @@ class JSONRPCError:
         self.id = id
         self.jsonrpc = jsonrpc
 
+    def as_dict(self):
+        return {
+            "jsonrpc": self.jsonrpc,
+            "error": {"code": self.code, "message": self.message},
+            "id": self.id,
+        }
+
     def json(self):
-        return json.dumps(
-            {
-                "jsonrpc": self.jsonrpc,
-                "error": {"code": self.code, "message": self.message},
-                "id": self.id,
-            }
-        )
+        return json.dumps(self.as_dict())
 
 
 async def invoke(
-    callables: list, input: str | dict
+    callables: set, input: str | dict
 ) -> JSONRPCResponse | JSONRPCError | None:
     try:
         data = input
         if isinstance(input, str):
             data = json.loads(input)
+
+        if "method" not in data or "params" not in data:
+            return JSONRPCError(0, -32600, "Invalid Request")
 
         request = JSONRPCRequest(**data)
         if request.jsonrpc != "2.0":
