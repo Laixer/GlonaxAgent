@@ -226,44 +226,43 @@ class Session:
     # TODO: See if we can reuse some of the methods from the `Session` class
     async def recv_message(self) -> Message | None:
         message_type, message = await self.reader.read()
-        if message_type == MessageType.INSTANCE:
-            instance = Instance.from_bytes(message)
+        match message_type:
+            case MessageType.INSTANCE:
+                instance = Instance.from_bytes(message)
 
-            message = Message(
-                type=ChannelMessageType.SIGNAL,
-                topic="instance",
-                payload=instance,
-            )
-            return message
+                message = Message(
+                    type=ChannelMessageType.SIGNAL,
+                    topic="instance",
+                    payload=instance,
+                )
+                return message
+            case MessageType.STATUS:
+                status = ModuleStatus.from_bytes(message)
 
-        elif message_type == MessageType.STATUS:
-            status = ModuleStatus.from_bytes(message)
+                message = Message(
+                    type=ChannelMessageType.SIGNAL,
+                    topic="status",
+                    payload=status,
+                )
+                return message
+            case MessageType.ENGINE:
+                engine = Engine.from_bytes(message)
 
-            message = Message(
-                type=ChannelMessageType.SIGNAL,
-                topic="status",
-                payload=status,
-            )
-            return message
+                message = Message(
+                    type=ChannelMessageType.SIGNAL,
+                    topic="engine",
+                    payload=engine,
+                )
+                return message
+            case MessageType.MOTION:
+                motion = Motion.from_bytes(message)
 
-        elif message_type == MessageType.ENGINE:
-            engine = Engine.from_bytes(message)
-
-            message = Message(
-                type=ChannelMessageType.SIGNAL,
-                topic="engine",
-                payload=engine,
-            )
-            return message
-        elif message_type == MessageType.MOTION:
-            motion = Motion.from_bytes(message)
-
-            message = Message(
-                type=ChannelMessageType.SIGNAL,
-                topic="motion",
-                payload=motion,
-            )
-            return message
+                message = Message(
+                    type=ChannelMessageType.SIGNAL,
+                    topic="motion",
+                    payload=motion,
+                )
+                return message
 
     async def machine_horn(self, value: bool):
         """
@@ -446,3 +445,21 @@ class Session:
             None
         """
         await self.writer.engine(Engine.shutdown())
+
+
+async def open_session(path: str, user_agent: str) -> Session:
+    """
+    Opens a session with the specified path and user agent.
+
+    Args:
+        path (str): The path to connect to.
+        user_agent (str): The user agent string.
+
+    Returns:
+        Session: The opened session.
+
+    """
+    reader, writer = await open_unix_connection(path)
+    session = Session(reader, writer, user_agent=user_agent)
+    await session.handshake()
+    return session

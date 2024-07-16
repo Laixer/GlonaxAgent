@@ -144,12 +144,11 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
         try:
             logger.info(f"Connecting to glonax at {path}")
 
-            reader, writer = await gclient.open_unix_connection(path)
-
             # TODO: Wrap in single function
-            async with Session(reader, writer) as session:
-                await session.handshake()
-
+            user_agent = "glonax-agent/1.0"
+            async with await gclient.open_session(
+                path, user_agent=user_agent
+            ) as session:
                 logger.info(f"Glonax connected to {path}")
                 logger.info(f"Instance ID: {session.instance.id}")
                 logger.info(f"Instance model: {session.instance.model}")
