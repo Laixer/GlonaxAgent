@@ -236,7 +236,7 @@ class Session:
             )
             return message
 
-        if message_type == MessageType.STATUS:
+        elif message_type == MessageType.STATUS:
             status = ModuleStatus.from_bytes(message)
 
             message = Message(
@@ -264,9 +264,6 @@ class Session:
                 payload=motion,
             )
             return message
-        else:
-            # TODO: Why not raise an exception here?
-            return None
 
     async def machine_horn(self, value: bool):
         """
