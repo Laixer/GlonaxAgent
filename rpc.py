@@ -45,7 +45,9 @@ class JSONRPCError:
         return json.dumps(self.__dict__)
 
 
-async def handle(callables: list, input: str | dict) -> str | None:
+async def handle(
+    callables: list, input: str | dict
+) -> JSONRPCResponse | JSONRPCError | None:
     try:
         data = input
         if isinstance(input, str):
@@ -53,7 +55,7 @@ async def handle(callables: list, input: str | dict) -> str | None:
 
         request = JSONRPCRequest(**data)
         if request.jsonrpc != "2.0":
-            return JSONRPCError(request.id, -32600, "Invalid Request").json()
+            return JSONRPCError(request.id, -32600, "Invalid Request")
 
         for callable in callables:
             if request.method.lower() == callable.__name__:
@@ -64,14 +66,14 @@ async def handle(callables: list, input: str | dict) -> str | None:
                 if request.id is None:
                     return
                 response = JSONRPCResponse(result, request.id)
-                return response.json()
+                return response
 
-        return JSONRPCError(request.id, -32601, "Method not found").json()
+        return JSONRPCError(request.id, -32601, "Method not found")
 
     except json.JSONDecodeError:
-        return JSONRPCError(0, -32700, "Parse error").json()
+        return JSONRPCError(0, -32700, "Parse error")
     except TypeError:
-        return JSONRPCError(0, -32602, "Invalid params").json()
+        return JSONRPCError(0, -32602, "Invalid params")
     except Exception:
-        return JSONRPCError(0, -32603, "Internal error").json()
+        return JSONRPCError(0, -32603, "Internal error")
 
