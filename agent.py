@@ -98,6 +98,9 @@ async def remote_address():
 
             logger.info(f"Remote address: {response_data['ip']}")
 
+            with open("remote_address.dat", "w") as f:
+                f.write(response_data["ip"])
+
         except (
             httpx.HTTPStatusError,
             httpx.ConnectTimeout,
@@ -271,6 +274,7 @@ async def websocket(
                 async def read_socket():
                     while True:
                         try:
+                            # TODO: We can just accept a JSON-RPC dispatch
                             message = await websocket.recv()
 
                             # TODO: Dont let pydantic determine the payload type
@@ -427,7 +431,21 @@ async def gps_handler():
 
 
 async def main():
+    global INSTANCE, instance_event
+
     try:
+        if os.path.exists("instance.dat"):
+            with open("instance.dat", "rb") as f:
+                INSTANCE = pickle.load(f)
+                logger.info(f"Cacheed instance ID: {INSTANCE.id}")
+                logger.info(f"Cacheed instance model: {INSTANCE.model}")
+                logger.info(f"Cacheed instance type: {INSTANCE.machine_type}")
+                logger.info(f"Cacheed instance version: {INSTANCE.version_string}")
+                logger.info(f"Cacheed instance serial number: {INSTANCE.serial_number}")
+                instance_event.set()
+
+                logger.debug("Instance event set")
+
         await remote_address()
 
         async with asyncio.TaskGroup() as tg:
