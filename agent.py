@@ -160,21 +160,14 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                 INSTANCE = session.instance
                 instance_event.set()
 
+                logger.debug("Instance event set")
+
                 with open("instance.dat", "wb") as f:
                     pickle.dump(session.instance, f)
 
-                logger.debug("Instance event set")
-
                 async def read_command_channel():
                     async for message in command_channel:
-                        if message.topic == "control":
-                            logger.info("Sending control message")
-                            await session.writer.control(message.payload)
-                        elif message.topic == "engine":
-                            logger.info("Sending engine message")
-                            await session.writer.engine(message.payload)
-                        elif message.topic == "motion":
-                            await session.writer.motion(message.payload)
+                        await session.writer.motion(message.payload)
 
                 async def read_session():
                     while True:
@@ -184,7 +177,7 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                                 signal_channel.put_nowait(message)
 
                         except ChannelFull:
-                            logger.warning("Glonax signal channel is full")
+                            logger.debug("Glonax signal channel is full")
 
                 await asyncio.gather(read_command_channel(), read_session())
 
