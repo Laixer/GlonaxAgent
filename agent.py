@@ -261,14 +261,11 @@ class RTCGlonaxPeerConnection:
             if self.__peer_connection.connectionState == "failed":
                 await self.__peer_connection.close()
                 await self._stop()
-            # elif self.__peer_connection.connectionState == "connected":
-            #     await self._start()
             elif self.__peer_connection.connectionState == "closed":
                 await self._stop()
 
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
-            logger.info(f"{channel.label}: created by remote party")
             if channel.label == "command":
                 if self.__glonax_session is None:
                     await self.__start_glonax()
@@ -278,7 +275,9 @@ class RTCGlonaxPeerConnection:
 
             @channel.on("message")
             async def on_message(message):
-                logger.info(f"{channel.label}: message: {len(message)}")
+                if channel.label == "command" and self.__glonax_session is not None:
+                    # logger.info(f"{channel.label}: message: {len(message)}")
+                    await self.__glonax_session.writer.motion(message)
 
     @property
     def user_agent(self) -> str:
@@ -302,6 +301,7 @@ class RTCGlonaxPeerConnection:
             except asyncio.CancelledError:
                 logger.info("Glonax task cancelled")
                 break
+            # TODO: Maybe move this to the glonax reader
             except asyncio.IncompleteReadError as e:
                 logger.error("Glonax disconnected")
                 break
@@ -310,7 +310,7 @@ class RTCGlonaxPeerConnection:
                 break
 
     async def __start_glonax(self) -> None:
-        logger.info("Starting RTCGlonaxPeerConnection")
+        logger.debug("Open gloanx session to %s", self.__socket_path)
 
         self.__glonax_session = await gclient.open_session(
             self.__socket_path, user_agent=self.__user_agent
@@ -318,7 +318,7 @@ class RTCGlonaxPeerConnection:
         await self.__glonax_session.motion_stop_all()
 
     async def _stop(self) -> None:
-        logger.info("Stopping RTPPeerProxy")
+        logger.info("Stopping peer connection")
 
         if self.__task is not None:
             self.__task.cancel()
