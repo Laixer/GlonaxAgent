@@ -23,7 +23,6 @@ from glonax.message import (
 from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
-from process import proc_reboot, proc_service_restart
 from systemd import journal
 from aiortc import RTCPeerConnection
 
@@ -200,35 +199,50 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
         await asyncio.sleep(1)
 
 
-async def glonax_p2p(
-    peer_connection: RTCPeerConnection,
-    signal_channel: Channel[Message],
-    command_channel: Channel[Message],
-):
-    # TODO: This is where we open a glonax channel
+async def glonax_p2p(peer_connection: RTCPeerConnection):
+    path = config["glonax"]["unix_socket"]
+
     # TODO: This is where we open video and audio channels
+
+    session = await gclient.open_session(path, user_agent="glonax-rtc/1.0")
+    await session.motion_stop_all()
+
+    async def on_session_message(session, channel):
+        while True:
+            try:
+                message_type, message = await session.reader.read()
+                # logger.info(f"RTC message: {message_type} with size {len(message)}")
+
+                channel.send(message)
+            except asyncio.CancelledError:
+                await session.close()
+                logger.info("P2P task cancelled")
+                return
+            # except aiortc.errors.InvalidStateError:
+            #     logger.error("Invalid state error")
+            #     break
 
     @peer_connection.on("datachannel")
     def on_datachannel(channel):
         logger.info(f"{channel.label}: created by remote party")
 
+        asyncio.create_task(on_session_message(session, channel))
+
         @channel.on("message")
         def on_message(message):
-            logger.info(f"{channel.label}: message: {message}")
+            logger.info(f"{channel.label}: message: {len(message)}")
 
-            # TODO: message is always json, so we can parse it
             # TODO: We can then send it to the glonax
 
-            if isinstance(message, str) and message.startswith("ping"):
-                channel.send("pong" + message[4:])
+            # if isinstance(message, str) and message.startswith("ping"):
+            #     channel.send("pong" + message[4:])
 
-    # TODO: Keep listening on glonax channel
-    while True:
-        try:
-            await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            logger.info("P2P task cancelled")
-            return
+    # while True:
+    #     try:
+    #         await asyncio.sleep(1)
+    #     except asyncio.CancelledError:
+    #         logger.info("P2P task cancelled")
+    #         return
 
 
 async def websocket(
