@@ -12,6 +12,9 @@ import httpx
 import psutil
 import asyncio
 import websockets
+from systemd import journal
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from glonax import client as gclient
 from glonax.message import (
@@ -20,11 +23,10 @@ from glonax.message import (
     ModuleStatus,
     RTCSessionDescription,
 )
-from pydantic import ValidationError
-from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 from process import System
-from systemd import journal
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 import jsonrpc
 
@@ -166,9 +168,6 @@ async def glonax():
     except asyncio.CancelledError:
         logger.info("Glonax task cancelled")
         return
-    except ChannelClosed:
-        logger.error("Glonax channel closed")
-        return
     except asyncio.IncompleteReadError as e:
         logger.error("Glonax disconnected")
     except ConnectionError as e:
@@ -200,10 +199,6 @@ async def rpc_apt(operation: str, package: str):
         await System.apt(operation, package)
     else:
         logger.error("User does not have sudo privileges")
-
-
-from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 
 class RTCGlonaxPeerConnection:
@@ -350,7 +345,7 @@ def rpc_call(func):
 
 
 @rpc_call
-def rpc_echo(input):
+def echo(input):
     return input
 
 
