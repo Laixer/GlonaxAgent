@@ -4,6 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# TODO: Rename module to jsonrpc
+# TODO: Add dataclass
+
 
 class JSONRPCRequest:
     def __init__(
