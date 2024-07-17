@@ -266,6 +266,14 @@ class RTCGlonaxPeerConnection:
     def user_agent(self) -> str:
         return self.__user_agent
 
+    @property
+    def socket_path(self) -> str:
+        return self.__socket_path
+
+    @property
+    def video_track(self) -> str:
+        return self.__video_track
+
     async def set_session_description(
         self, offer: RTCSessionDescription
     ) -> RTCSessionDescription:
@@ -318,7 +326,7 @@ peers = set()
 async def rpc_setup_rtc(sdp: str):
     path = config["glonax"]["unix_socket"]
 
-    logger.info("Received RTC setup command")
+    logger.info("Setting up RTC connection")
 
     # # TODO: Check how many peer connections we can have
 
@@ -330,9 +338,18 @@ async def rpc_setup_rtc(sdp: str):
     return answer.sdp
 
 
-async def websocket(
-    signal_channel: Channel[Message], command_channel: Channel[Message]
-):
+callables = set(
+    [
+        rpc_echo,
+        rpc_reboot,
+        rpc_systemctl,
+        rpc_apt,
+        rpc_setup_rtc,
+    ]
+)
+
+
+async def websocket():
     global INSTANCE, instance_event
 
     logger.debug("Waiting for instance event")
@@ -360,16 +377,6 @@ async def websocket(
             async with websockets.connect(uri) as websocket:
                 logger.info(f"Websocket connected to {uri}")
 
-                callables = set(
-                    [
-                        rpc_echo,
-                        rpc_reboot,
-                        rpc_systemctl,
-                        rpc_apt,
-                        rpc_setup_rtc,
-                    ]
-                )
-
                 while True:
                     message = await websocket.recv()
                     response = await jsonrpc.invoke(callables, message)
@@ -379,9 +386,6 @@ async def websocket(
         except asyncio.CancelledError:
             logger.info("Websocket reader cancelled")
             return
-        # except ChannelClosed:
-        #     logger.error("Websocket channel closed")
-        #     return
         except websockets.ConnectionClosed:
             logger.info("Websocket connection closed")
         except TimeoutError:
@@ -510,13 +514,13 @@ async def main():
         await remote_address()
 
         async with asyncio.TaskGroup() as tg:
-            signal_channel: Channel[str] = Channel(8)
-            comamnd_channel: Channel[str] = Channel(8)
+            # signal_channel: Channel[str] = Channel(8)
+            # comamnd_channel: Channel[str] = Channel(8)
 
             # TODO: Add GPS task
-            task1 = tg.create_task(glonax(signal_channel, comamnd_channel))
+            task1 = tg.create_task(glonax())
             # task2 = tg.create_task(gps_handler())
-            task3 = tg.create_task(websocket(signal_channel, comamnd_channel))
+            task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
