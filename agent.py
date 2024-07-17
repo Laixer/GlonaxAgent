@@ -204,16 +204,15 @@ def rpc_echo(input):
     return input
 
 
-def rpc_reboot():
-    # proc_reboot()
-    pass
+async def rpc_reboot():
+    await System.reboot()
 
 
 async def rpc_systemctl(operation: str, service: str):
     # services = ["glonax", "glonax-agent", "glonax-inpput"]
     # if service in services:
     #     proc_service_restart(service_name)
-    await System.systemdctl(operation, service)
+    await System.systemctl(operation, service)
 
 
 def rpc_apt(operation: str, package: str):

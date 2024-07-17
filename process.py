@@ -25,6 +25,7 @@ class System:
 
         reboot_process = await asyncio.create_subprocess_exec(
             "sudo",
+            "systemctl",
             "reboot",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -37,10 +38,10 @@ class System:
         else:
             print(f"Error during reboot: {stderr.decode().strip()}")
 
-    async def systemdctl(action: str, service_name: str):
-        print(f"Initiating {action} on service: {service_name}...")
+    async def systemctl(action: str, service_name: str | None = None):
+        print(f"Initiating systemctl {action}...")
 
-        process = await asyncio.create_subprocess_exec(
+        systemctl_process = await asyncio.create_subprocess_exec(
             "sudo",
             "systemctl",
             action,
@@ -49,13 +50,9 @@ class System:
             stderr=asyncio.subprocess.PIPE,
         )
 
-        stdout, stderr = await process.communicate()
+        stdout, stderr = await systemctl_process.communicate()
 
-        if process.returncode == 0:
-            print(f"Service {service_name} {action}ed successfully.")
-            print(stdout.decode().strip())
+        if systemctl_process.returncode == 0:
+            print(f"Systemctl {action} executed successfully.")
         else:
-            print(
-                f"Error during {action} on service {service_name}: {stderr.decode().strip()}"
-            )
-
+            print(f"Error during systemctl {action}: {stderr.decode().strip()}")
