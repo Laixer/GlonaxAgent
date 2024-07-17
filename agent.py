@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import json
 import os
 import pickle
 import time
@@ -113,29 +112,29 @@ async def remote_address():
             logger.error(f"Unknown error: {e}")
 
 
-async def create_webrtc_stream(
-    description: RTCSessionDescription, name: str
-) -> Message:
-    async with httpx.AsyncClient() as client:
-        try:
-            go2rtc_base_url = "http://localhost:1984/api"
-            response = await client.post(
-                f"{go2rtc_base_url}/webrtc?src={name}", json=description.model_dump()
-            )
-            response.raise_for_status()
-            response_data = response.json()
+# async def create_webrtc_stream(
+#     description: RTCSessionDescription, name: str
+# ) -> Message:
+#     async with httpx.AsyncClient() as client:
+#         try:
+#             go2rtc_base_url = "http://localhost:1984/api"
+#             response = await client.post(
+#                 f"{go2rtc_base_url}/webrtc?src={name}", json=description.model_dump()
+#             )
+#             response.raise_for_status()
+#             response_data = response.json()
 
-            peer = RTCSessionDescription(type="answer", sdp=response_data["sdp"])
-            return Message(type=ChannelMessageType.PEER, topic="answer", payload=peer)
+#             peer = RTCSessionDescription(type="answer", sdp=response_data["sdp"])
+#             return Message(type=ChannelMessageType.PEER, topic="answer", payload=peer)
 
-        except (
-            httpx.HTTPStatusError,
-            httpx.ConnectTimeout,
-            httpx.ConnectError,
-        ) as e:
-            logger.error(f"HTTP Error: {e}")
-        except Exception as e:
-            logger.error(f"Unknown error: {e}")
+#         except (
+#             httpx.HTTPStatusError,
+#             httpx.ConnectTimeout,
+#             httpx.ConnectError,
+#         ) as e:
+#             logger.error(f"HTTP Error: {e}")
+#         except Exception as e:
+#             logger.error(f"Unknown error: {e}")
 
 
 async def glonax():
@@ -172,33 +171,6 @@ async def glonax():
         logger.error("Glonax disconnected")
     except ConnectionError as e:
         logger.error(f"Glonax connection error: {e}")
-
-
-async def rpc_reboot():
-    if await System.is_sudo():
-        logger.info("Rebooting system")
-        await System.reboot()
-    else:
-        logger.error("User does not have sudo privileges")
-
-
-async def rpc_systemctl(operation: str, service: str):
-    # services = ["glonax", "glonax-agent", "glonax-inpput"]
-    # if service in services:
-    #     proc_service_restart(service_name)
-    if await System.is_sudo():
-        logger.info(f"Running systemctl {operation} {service}")
-        await System.systemctl(operation, service)
-    else:
-        logger.error("User does not have sudo privileges")
-
-
-async def rpc_apt(operation: str, package: str):
-    if await System.is_sudo():
-        logger.info(f"Running apt {operation} {package}")
-        await System.apt(operation, package)
-    else:
-        logger.error("User does not have sudo privileges")
 
 
 class RTCGlonaxPeerConnection:
@@ -331,9 +303,6 @@ async def rpc_setup_rtc(sdp: str):
 
 callables = set(
     [
-        rpc_reboot,
-        rpc_systemctl,
-        rpc_apt,
         rpc_setup_rtc,
     ]
 )
@@ -342,6 +311,36 @@ callables = set(
 def rpc_call(func):
     callables.add(func)
     return func
+
+
+@rpc_call
+async def reboot():
+    if await System.is_sudo():
+        logger.info("Rebooting system")
+        await System.reboot()
+    else:
+        logger.error("User does not have sudo privileges")
+
+
+@rpc_call
+async def systemctl(operation: str, service: str):
+    # services = ["glonax", "glonax-agent", "glonax-inpput"]
+    # if service in services:
+    #     proc_service_restart(service_name)
+    if await System.is_sudo():
+        logger.info(f"Running systemctl {operation} {service}")
+        await System.systemctl(operation, service)
+    else:
+        logger.error("User does not have sudo privileges")
+
+
+@rpc_call
+async def apt(operation: str, package: str):
+    if await System.is_sudo():
+        logger.info(f"Running apt {operation} {package}")
+        await System.apt(operation, package)
+    else:
+        logger.error("User does not have sudo privileges")
 
 
 @rpc_call
