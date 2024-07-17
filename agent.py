@@ -261,17 +261,17 @@ async def websocket(
             async with websockets.connect(uri) as websocket:
                 logger.info(f"Websocket connected to {uri}")
 
-                async def read_signal_channel():
-                    async for message in signal_channel:
-                        if message.topic == "engine":
-                            if engine_detector.process_message(message):
-                                await websocket.send(message.model_dump_json())
-                        elif message.topic == "status":
-                            if status_detector.process_status(message.payload):
-                                await websocket.send(message.model_dump_json())
-                        elif message.topic == "motion":
-                            if motion_detector.process_message(message):
-                                await websocket.send(message.model_dump_json())
+                # async def read_signal_channel():
+                #     async for message in signal_channel:
+                #         if message.topic == "engine":
+                #             if engine_detector.process_message(message):
+                #                 await websocket.send(message.model_dump_json())
+                #         elif message.topic == "status":
+                #             if status_detector.process_status(message.payload):
+                #                 await websocket.send(message.model_dump_json())
+                #         elif message.topic == "motion":
+                #             if motion_detector.process_message(message):
+                #                 await websocket.send(message.model_dump_json())
 
                 def rpc_echo(input):
                     return input
@@ -309,49 +309,50 @@ async def websocket(
                         if response is not None:
                             await websocket.send(response.json())
 
-                async def read_socket():
-                    while True:
-                        try:
-                            # TODO: We can just accept a JSON-RPC dispatch
-                            message = await websocket.recv()
+                # async def read_socket():
+                #     while True:
+                #         try:
+                #             # TODO: We can just accept a JSON-RPC dispatch
+                #             message = await websocket.recv()
 
-                            # TODO: Dont let pydantic determine the payload type
-                            message = Message.model_validate_json(message)
-                            if message.type == ChannelMessageType.COMMAND:
-                                if message.topic == "process":
-                                    logger.info("Received process command")
-                                    # await proc_reboot()
-                                    # await proc_service_restart("glonax")
-                                    # TODO: Add process command handler
-                                else:
-                                    command_channel.put_nowait(message)
-                            elif message.type == ChannelMessageType.PEER:
-                                if message.topic == "offer":
-                                    logger.info("RTC Offer: Creating peer connection")
-                                    offer = message.payload
+                #             # TODO: Dont let pydantic determine the payload type
+                #             message = Message.model_validate_json(message)
+                #             if message.type == ChannelMessageType.COMMAND:
+                #                 if message.topic == "process":
+                #                     logger.info("Received process command")
+                #                     # await proc_reboot()
+                #                     # await proc_service_restart("glonax")
+                #                     # TODO: Add process command handler
+                #                 else:
+                #                     command_channel.put_nowait(message)
+                #             elif message.type == ChannelMessageType.PEER:
+                #                 if message.topic == "offer":
+                #                     logger.info("RTC Offer: Creating peer connection")
+                #                     offer = message.payload
 
-                                    default_camera = "linux_usbcam"
-                                    answer = await create_webrtc_stream(
-                                        offer, default_camera
-                                    )
-                                    await websocket.send(answer.model_dump_json())
+                #                     default_camera = "linux_usbcam"
+                #                     answer = await create_webrtc_stream(
+                #                         offer, default_camera
+                #                     )
+                #                     await websocket.send(answer.model_dump_json())
 
-                                    # peer_connection = RTCPeerConnection()
+                #                     # peer_connection = RTCPeerConnection()
 
-                                    # await peer_connection.setRemoteDescription(offer)
+                #                     # await peer_connection.setRemoteDescription(offer)
 
-                                    # answer = await peer_connection.createAnswer()
-                                    # await peer_connection.setLocalDescription(answer)
-                                    # await websocket.send(
-                                    #     peer_connection.localDescription
-                                    # )
+                #                     # answer = await peer_connection.createAnswer()
+                #                     # await peer_connection.setLocalDescription(answer)
+                #                     # await websocket.send(
+                #                     #     peer_connection.localDescription
+                #                     # )
 
-                        except ChannelFull:
-                            logger.warning("Websocket command channel is full")
-                        except ValidationError as e:
-                            logger.error(f"Validation error: {e}")
+                #         except ChannelFull:
+                #             logger.warning("Websocket command channel is full")
+                #         except ValidationError as e:
+                #             logger.error(f"Validation error: {e}")
 
-                await asyncio.gather(read_signal_channel(), read_socket())
+                # await asyncio.gather(read_signal_channel(), read_socket())
+                await jsonrpc_handler()
 
         except asyncio.CancelledError:
             logger.info("Websocket reader cancelled")
