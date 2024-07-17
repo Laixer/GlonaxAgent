@@ -199,52 +199,6 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
         await asyncio.sleep(1)
 
 
-async def glonax_p2p(peer_connection: RTCPeerConnection):
-    path = config["glonax"]["unix_socket"]
-
-    # TODO: This is where we open video and audio channels
-
-    session = await gclient.open_session(path, user_agent="glonax-rtc/1.0")
-    await session.motion_stop_all()
-
-    async def on_session_message(session, channel):
-        while True:
-            try:
-                message_type, message = await session.reader.read()
-                # logger.info(f"RTC message: {message_type} with size {len(message)}")
-
-                channel.send(message)
-            except asyncio.CancelledError:
-                await session.close()
-                logger.info("P2P task cancelled")
-                return
-            # except aiortc.errors.InvalidStateError:
-            #     logger.error("Invalid state error")
-            #     break
-
-    @peer_connection.on("datachannel")
-    def on_datachannel(channel):
-        logger.info(f"{channel.label}: created by remote party")
-
-        asyncio.create_task(on_session_message(session, channel))
-
-        @channel.on("message")
-        def on_message(message):
-            logger.info(f"{channel.label}: message: {len(message)}")
-
-            # TODO: We can then send it to the glonax
-
-            # if isinstance(message, str) and message.startswith("ping"):
-            #     channel.send("pong" + message[4:])
-
-    # while True:
-    #     try:
-    #         await asyncio.sleep(1)
-    #     except asyncio.CancelledError:
-    #         logger.info("P2P task cancelled")
-    #         return
-
-
 def rpc_echo(input):
     return input
 
@@ -266,17 +220,51 @@ def rpc_apt(operation: str, package: str):
 
 
 async def rpc_setup_rtc(sdp: str):
+    path = config["glonax"]["unix_socket"]
+
     logger.info("Received RTC setup command")
 
     # TODO: Check how many peer connections we can have
 
     peer_connection = RTCPeerConnection()
 
+    # TODO: This is where we open video and audio channels
+
+    session = await gclient.open_session(path, user_agent="glonax-rtc/1.0")
+    await session.motion_stop_all()
+
     offer = RTCSessionDescription(type="offer", sdp=sdp)
     await peer_connection.setRemoteDescription(offer)
 
     answer = await peer_connection.createAnswer()
     await peer_connection.setLocalDescription(answer)
+
+    async def on_session_message(session: gclient.Session, channel):
+        while True:
+            try:
+                data = await session.reader.read_frame()
+                # logger.info(f"RTC data with size {len(data)}")
+
+                channel.send(data)
+            except asyncio.CancelledError:
+                await session.close()
+                logger.info("P2P task cancelled")
+                return
+            # except aiortc.errors.InvalidStateError:
+            #     logger.error("Invalid state error")
+            #     break
+
+    @peer_connection.on("datachannel")
+    def on_datachannel(channel):
+        logger.info(f"{channel.label}: created by remote party")
+
+        asyncio.create_task(on_session_message(session, channel))
+
+        @channel.on("message")
+        async def on_message(message):
+            logger.info(f"{channel.label}: message: {len(message)}")
+
+            await session.writer.write_frame(message)
 
     # tg.create_task(glonax_p2p(peer_connection))
 
