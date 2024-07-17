@@ -90,6 +90,11 @@ class GlonaxStreamWriter:
         self.writer = writer
 
     # TODO: Maybe move the actual encoding to the `Frame` class
+    async def write_frame(self, data: bytes):
+        self.writer.write(data)
+        await self.writer.drain()
+
+    # TODO: Maybe move the actual encoding to the `Frame` class
     async def write(self, type: MessageType, data: bytes):
         """
         Writes a message to the stream.
@@ -148,6 +153,29 @@ class GlonaxStreamReader:
 
     def __init__(self, reader: asyncio.StreamReader):
         self.reader = reader
+
+    async def read_frame(self) -> bytes:
+        """
+        Reads a frame from the stream.
+
+        Returns:
+            bytes: The frame data.
+        """
+        header = await self.reader.readexactly(10)
+        if header[:3] != b"LXR":
+            raise ProtocolError("Invalid header received")
+        if header[3:4] != b"\x03":
+            raise ProtocolError("Invalid protocol version")
+
+        # message_type = MessageType(struct.unpack("B", header[4:5])[0])
+        message_length = struct.unpack(">H", header[5:7])[0]
+        if header[7:10] != b"\x00\x00\x00":
+            raise ProtocolError("Invalid header padding")
+        message = await self.reader.readexactly(message_length)
+        if len(message) != message_length:
+            raise ProtocolError("Invalid message length")
+
+        return header + message
 
     async def read(self) -> tuple[MessageType, bytes]:
         """
