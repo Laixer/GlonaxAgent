@@ -23,6 +23,7 @@ from glonax.message import (
 from pydantic import ValidationError
 from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
+from process import System
 from systemd import journal
 from aiortc import RTCPeerConnection
 
@@ -208,11 +209,11 @@ def rpc_reboot():
     pass
 
 
-def rpc_systemctl(operation: str, service: str):
+async def rpc_systemctl(operation: str, service: str):
     # services = ["glonax", "glonax-agent", "glonax-inpput"]
     # if service in services:
     #     proc_service_restart(service_name)
-    pass
+    await System.systemdctl(operation, service)
 
 
 def rpc_apt(operation: str, package: str):
