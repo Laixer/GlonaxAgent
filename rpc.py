@@ -11,27 +11,68 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class JSONRPCRequest:
+    """
+    Represents a JSON-RPC request.
+
+    Attributes:
+        method (str): The name of the method to be called.
+        params (any): The parameters to be passed to the method.
+        id (int | None, optional): The request ID. Defaults to None.
+        jsonrpc (str, optional): The JSON-RPC version. Defaults to "2.0".
+    """
+
     method: str
     params: any
     id: int | None = None
     jsonrpc: str = "2.0"
 
     def json(self):
+        """
+        Returns the JSON representation of the request.
+
+        Returns:
+            str: The JSON representation of the request.
+        """
         return json.dumps(asdict(self))
 
 
 @dataclass
 class JSONRPCResponse:
+    """
+    Represents a JSON-RPC response object.
+
+    Attributes:
+        result (any): The result of the JSON-RPC method call.
+        id (int): The unique identifier of the JSON-RPC request.
+        jsonrpc (str): The version of the JSON-RPC protocol (default: "2.0").
+    """
+
     result: any
     id: int
     jsonrpc: str = "2.0"
 
     def json(self):
+        """
+        Returns the JSON representation of the JSON-RPC response object.
+
+        Returns:
+            str: The JSON representation of the response object.
+        """
         return json.dumps(asdict(self))
 
 
 @dataclass
 class JSONRPCError:
+    """
+    Represents a JSON-RPC error object.
+
+    Attributes:
+        id (int): The unique identifier of the JSON-RPC request.
+        code (int): The error code.
+        message (str): The error message.
+        jsonrpc (str): The version of the JSON-RPC protocol (default: "2.0").
+    """
+
     id: int
     code: int
     message: str
@@ -45,6 +86,12 @@ class JSONRPCError:
         }
 
     def json(self):
+        """
+        Returns the JSON representation of the JSON-RPC response object.
+
+        Returns:
+            str: The JSON representation of the response object.
+        """
         return json.dumps(self.as_dict())
 
 
@@ -71,6 +118,24 @@ class JSONRPCInvalidParams(JSONRPCError):
 async def invoke(
     callables: set[Callable], input: str | dict | list, prefix: str = "rpc_"
 ) -> JSONRPCResponse | JSONRPCError | None:
+    """
+    Invokes the appropriate callable function based on the JSON-RPC request.
+
+    Args:
+        callables (set[Callable]): A set of callable functions to be invoked.
+        input (str | dict | list): The JSON-RPC request input.
+        prefix (str, optional): The prefix to be added to the method name when matching callable functions. Defaults to "rpc_".
+
+    Returns:
+        JSONRPCResponse | JSONRPCError | None: The JSON-RPC response or error, or None if the request has no id.
+
+    Raises:
+        JSONRPCInvalidRequest: If the request is not a valid JSON-RPC request.
+        JSONRPCMethodNotFound: If no matching callable function is found.
+        JSONRPCParseError: If there is an error parsing the JSON input.
+        JSONRPCInvalidParams: If the request has invalid parameters.
+        JSONRPCError: If there is an internal error during the invocation.
+    """
     try:
         if isinstance(input, str):
             data = json.loads(input)
