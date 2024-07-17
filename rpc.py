@@ -1,42 +1,41 @@
 import json
 import asyncio
 import logging
+from typing import Callable
+from dataclasses import asdict, dataclass
 
 logger = logging.getLogger(__name__)
 
 # TODO: Rename module to jsonrpc
-# TODO: Add dataclass
 
 
+@dataclass
 class JSONRPCRequest:
-    def __init__(
-        self, method: str, params, id: int | None = None, jsonrpc: str = "2.0"
-    ):
-        self.method = method
-        self.params = params
-        self.id = id
-        self.jsonrpc = jsonrpc
+    method: str
+    params: any
+    id: int | None = None
+    jsonrpc: str = "2.0"
 
     def json(self):
-        return json.dumps(self.__dict__)
+        return json.dumps(asdict(self))
 
 
+@dataclass
 class JSONRPCResponse:
-    def __init__(self, result, id: int, jsonrpc: str = "2.0"):
-        self.result = result
-        self.id = id
-        self.jsonrpc = jsonrpc
+    result: any
+    id: int
+    jsonrpc: str = "2.0"
 
     def json(self):
-        return json.dumps(self.__dict__)
+        return json.dumps(asdict(self))
 
 
+@dataclass
 class JSONRPCError:
-    def __init__(self, id: int, code: int, message: str, jsonrpc: str = "2.0"):
-        self.code = code
-        self.message = message
-        self.id = id
-        self.jsonrpc = jsonrpc
+    id: int
+    code: int
+    message: str
+    jsonrpc: str = "2.0"
 
     def as_dict(self):
         return {
@@ -69,41 +68,55 @@ class JSONRPCInvalidParams(JSONRPCError):
         super().__init__(id, -32602, message="Invalid params", jsonrpc="2.0")
 
 
-# TODO: Catch erros from function call
-# TODO: Add logging
 async def invoke(
-    callables: set, input: str | dict, prefix: str = "rpc_"
+    callables: set[Callable], input: str | dict | list, prefix: str = "rpc_"
 ) -> JSONRPCResponse | JSONRPCError | None:
     try:
-        data = input
         if isinstance(input, str):
             data = json.loads(input)
+        else:
+            data = input
 
-        if "method" not in data or "params" not in data or "jsonrpc" not in data:
-            return JSONRPCInvalidRequest(0)
+        if isinstance(data, list):
+            return [await invoke(callables, item, prefix) for item in data]
+
+        if (
+            not isinstance(data, dict)
+            or "jsonrpc" not in data
+            or "method" not in data
+            or data["jsonrpc"] != "2.0"
+        ):
+            return JSONRPCInvalidRequest(data.get("id", None))
 
         request = JSONRPCRequest(**data)
-        if request.jsonrpc != "2.0":
-            return JSONRPCInvalidRequest(request.id)
-
         for callable in callables:
             method = request.method.strip()
             if method == callable.__name__ or prefix + method == callable.__name__:
                 if asyncio.iscoroutinefunction(callable):
-                    result = await callable(*request.params)
+                    result = (
+                        await callable(**request.params)
+                        if isinstance(request.params, dict)
+                        else await callable(*request.params)
+                    )
                 else:
-                    result = callable(*request.params)
+                    result = (
+                        callable(**request.params)
+                        if isinstance(request.params, dict)
+                        else callable(*request.params)
+                    )
+
                 if request.id is None:
                     return
-                response = JSONRPCResponse(result, request.id)
-                return response
+                return JSONRPCResponse(result, request.id)
 
         return JSONRPCMethodNotFound(request.id)
 
     except json.JSONDecodeError:
+        logger.error("JSON decode error", exc_info=True)
         return JSONRPCParseError()
     except TypeError:
-        return JSONRPCInvalidParams(0)
+        logger.error("Invalid params", exc_info=True)
+        return JSONRPCInvalidParams(data.get("id", None))
     except Exception as e:
-        logger.error(e)
-        return JSONRPCError(0, -32603, "Internal error")
+        logger.error(f"Internal error: {str(e)}", exc_info=True)
+        return JSONRPCError(data.get("id", None), -32603, "Internal error")
