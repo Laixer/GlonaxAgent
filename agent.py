@@ -26,7 +26,7 @@ from models import HostConfig, Telemetry
 from process import System
 from systemd import journal
 
-import rpc
+import jsonrpc
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -389,7 +389,7 @@ async def websocket(
 
                 while True:
                     message = await websocket.recv()
-                    response = await rpc.invoke(callables, message)
+                    response = await jsonrpc.invoke(callables, message)
                     if response is not None:
                         await websocket.send(response.json())
 

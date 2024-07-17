@@ -6,8 +6,6 @@ from dataclasses import asdict, dataclass
 
 logger = logging.getLogger(__name__)
 
-# TODO: Rename module to jsonrpc
-
 
 @dataclass
 class JSONRPCRequest:
@@ -128,13 +126,6 @@ async def invoke(
 
     Returns:
         JSONRPCResponse | JSONRPCError | None: The JSON-RPC response or error, or None if the request has no id.
-
-    Raises:
-        JSONRPCInvalidRequest: If the request is not a valid JSON-RPC request.
-        JSONRPCMethodNotFound: If no matching callable function is found.
-        JSONRPCParseError: If there is an error parsing the JSON input.
-        JSONRPCInvalidParams: If the request has invalid parameters.
-        JSONRPCError: If there is an internal error during the invocation.
     """
     try:
         if isinstance(input, str):
