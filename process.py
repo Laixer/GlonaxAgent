@@ -1,4 +1,7 @@
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class System:
@@ -17,42 +20,52 @@ class System:
             return process.returncode == 0
 
         except Exception as e:
-            print(f"An error occurred: {str(e)}")
+            logger.error(f"Error checking sudo: {e}")
             return False
 
-    async def reboot():
-        print("Initiating system reboot...")
+    async def reboot() -> bool:
+        try:
+            reboot_process = await asyncio.create_subprocess_exec(
+                "sudo",
+                "systemctl",
+                "reboot",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
 
-        reboot_process = await asyncio.create_subprocess_exec(
-            "sudo",
-            "systemctl",
-            "reboot",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+            _, stderr = await reboot_process.communicate()
 
-        stdout, stderr = await reboot_process.communicate()
+            if reboot_process.returncode == 0:
+                return True
+            else:
+                logger.error(f"Error rebooting system: {stderr.decode().strip()}")
+                return False
 
-        if reboot_process.returncode == 0:
-            print("Reboot command executed successfully.")
-        else:
-            print(f"Error during reboot: {stderr.decode().strip()}")
+        except Exception as e:
+            logger.error(f"Error rebooting system: {e}")
+            return False
 
-    async def systemctl(action: str, service_name: str | None = None):
-        print(f"Initiating systemctl {action}...")
+    async def systemctl(action: str, service_name: str | None = None) -> bool:
+        try:
+            systemctl_process = await asyncio.create_subprocess_exec(
+                "sudo",
+                "systemctl",
+                action,
+                service_name,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
 
-        systemctl_process = await asyncio.create_subprocess_exec(
-            "sudo",
-            "systemctl",
-            action,
-            service_name,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+            _, stderr = await systemctl_process.communicate()
 
-        stdout, stderr = await systemctl_process.communicate()
+            if systemctl_process.returncode == 0:
+                return True
+            else:
+                logger.error(
+                    f"Error during systemctl {action}: {stderr.decode().strip()}"
+                )
+                return False
 
-        if systemctl_process.returncode == 0:
-            print(f"Systemctl {action} executed successfully.")
-        else:
-            print(f"Error during systemctl {action}: {stderr.decode().strip()}")
+        except Exception as e:
+            logger.error(f"Error during systemctl {action}: {e}")
+            return False
