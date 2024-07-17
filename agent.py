@@ -206,21 +206,30 @@ def rpc_echo(input):
 
 
 async def rpc_reboot():
-    # TODO: Check for root permissions
-    await System.reboot()
+    if await System.is_sudo():
+        logger.info("Rebooting system")
+        await System.reboot()
+    else:
+        logger.error("User does not have sudo privileges")
 
 
 async def rpc_systemctl(operation: str, service: str):
-    # TODO: Check for root permissions
     # services = ["glonax", "glonax-agent", "glonax-inpput"]
     # if service in services:
     #     proc_service_restart(service_name)
-    await System.systemctl(operation, service)
+    if await System.is_sudo():
+        logger.info(f"Running systemctl {operation} {service}")
+        await System.systemctl(operation, service)
+    else:
+        logger.error("User does not have sudo privileges")
 
 
-def rpc_apt(operation: str, package: str):
-    # TODO: Check for root permissions
-    pass
+async def rpc_apt(operation: str, package: str):
+    if await System.is_sudo():
+        logger.info(f"Running apt {operation} {package}")
+        await System.apt(operation, package)
+    else:
+        logger.error("User does not have sudo privileges")
 
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
