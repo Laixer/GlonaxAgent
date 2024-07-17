@@ -25,7 +25,6 @@ from aiochannel import Channel, ChannelClosed, ChannelFull
 from models import HostConfig, Telemetry
 from process import System
 from systemd import journal
-from aiortc import RTCPeerConnection
 
 import rpc
 
@@ -169,21 +168,23 @@ async def glonax(signal_channel: Channel[Message], command_channel: Channel[Mess
                 with open("instance.dat", "wb") as f:
                     pickle.dump(session.instance, f)
 
-                async def read_command_channel():
-                    async for message in command_channel:
-                        await session.writer.motion(message.payload)
+                return
 
-                async def read_session():
-                    while True:
-                        try:
-                            message = await session.recv_message()
-                            if message is not None:
-                                signal_channel.put_nowait(message)
+                # async def read_command_channel():
+                #     async for message in command_channel:
+                #         await session.writer.motion(message.payload)
 
-                        except ChannelFull:
-                            logger.debug("Glonax signal channel is full")
+                # async def read_session():
+                #     while True:
+                #         try:
+                #             message = await session.recv_message()
+                #             if message is not None:
+                #                 signal_channel.put_nowait(message)
 
-                await asyncio.gather(read_command_channel(), read_session())
+                #         except ChannelFull:
+                #             logger.debug("Glonax signal channel is full")
+
+                # await asyncio.gather(read_command_channel(), read_session())
 
         except asyncio.CancelledError:
             logger.info("Glonax task cancelled")
@@ -205,10 +206,12 @@ def rpc_echo(input):
 
 
 async def rpc_reboot():
+    # TODO: Check for root permissions
     await System.reboot()
 
 
 async def rpc_systemctl(operation: str, service: str):
+    # TODO: Check for root permissions
     # services = ["glonax", "glonax-agent", "glonax-inpput"]
     # if service in services:
     #     proc_service_restart(service_name)
@@ -216,7 +219,117 @@ async def rpc_systemctl(operation: str, service: str):
 
 
 def rpc_apt(operation: str, package: str):
+    # TODO: Check for root permissions
     pass
+
+
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaPlayer, MediaRelay
+
+
+class RTCGlonaxPeerConnection:
+    def __init__(self, socket_path: str, user_agent: str = "glonax-rtc/1.0"):
+        self.__socket_path = socket_path
+        self.__user_agent = user_agent
+
+        self.__video_track = "/dev/video0"
+        self.__av_options = {
+            "framerate": "30",
+            "video_size": "640x480",
+            "preset": "ultrafast",
+            "tune": "zerolatency",
+        }
+
+        self.__peer_connection = RTCPeerConnection()
+        self.__glonax_session = None
+        self.__task = None
+
+        self.__webcam = MediaPlayer(
+            self.__video_track, format="v4l2", options=self.__av_options
+        )
+
+        relay = MediaRelay()
+        video = relay.subscribe(self.__webcam.video)
+
+        self.__peer_connection.addTrack(video)
+
+        @self.__peer_connection.on("connectionstatechange")
+        async def on_connectionstatechange():
+            logger.info(
+                "Connection state is %s" % self.__peer_connection.connectionState
+            )
+            if self.__peer_connection.connectionState == "failed":
+                await self.__peer_connection.close()
+                await self._stop()
+            # elif self.__peer_connection.connectionState == "connected":
+            #     await self._start()
+            elif self.__peer_connection.connectionState == "closed":
+                await self._stop()
+
+        @self.__peer_connection.on("datachannel")
+        async def on_datachannel(channel):
+            logger.info(f"{channel.label}: created by remote party")
+            if channel.label == "command":
+                if self.__glonax_session is None:
+                    await self.__start_glonax()
+                if self.__task is None:
+                    assert self.__glonax_session is not None
+                    self.__task = asyncio.create_task(self.__run_glonax_read(channel))
+
+            @channel.on("message")
+            async def on_message(message):
+                logger.info(f"{channel.label}: message: {len(message)}")
+
+    @property
+    def user_agent(self) -> str:
+        return self.__user_agent
+
+    async def set_session_description(
+        self, offer: RTCSessionDescription
+    ) -> RTCSessionDescription:
+        await self.__peer_connection.setRemoteDescription(offer)
+        answer = await self.__peer_connection.createAnswer()
+        await self.__peer_connection.setLocalDescription(answer)
+
+        return self.__peer_connection.localDescription
+
+    async def __run_glonax_read(self, channel):
+        while True:
+            try:
+                data = await self.__glonax_session.reader.read_frame()
+                channel.send(data)
+
+            except asyncio.CancelledError:
+                logger.info("Glonax task cancelled")
+                break
+            except asyncio.IncompleteReadError as e:
+                logger.error("Glonax disconnected")
+                break
+            except ConnectionError as e:
+                logger.error(f"Glonax connection error: {e}")
+                break
+
+    async def __start_glonax(self) -> None:
+        logger.info("Starting RTCGlonaxPeerConnection")
+
+        self.__glonax_session = await gclient.open_session(
+            self.__socket_path, user_agent=self.__user_agent
+        )
+        await self.__glonax_session.motion_stop_all()
+
+    async def _stop(self) -> None:
+        logger.info("Stopping RTPPeerProxy")
+
+        if self.__task is not None:
+            self.__task.cancel()
+        if self.__glonax_session is not None:
+            await self.__glonax_session.motion_stop_all()
+            await self.__glonax_session.close()
+        # TODO: We should not be calling this
+        self.__webcam._stop(self.__webcam.video)
+
+
+peers = set()
 
 
 async def rpc_setup_rtc(sdp: str):
@@ -224,51 +337,14 @@ async def rpc_setup_rtc(sdp: str):
 
     logger.info("Received RTC setup command")
 
-    # TODO: Check how many peer connections we can have
+    # # TODO: Check how many peer connections we can have
 
-    peer_connection = RTCPeerConnection()
-
-    # TODO: This is where we open video and audio channels
-
-    session = await gclient.open_session(path, user_agent="glonax-rtc/1.0")
-    await session.motion_stop_all()
-
+    peer = RTCGlonaxPeerConnection(path)
     offer = RTCSessionDescription(type="offer", sdp=sdp)
-    await peer_connection.setRemoteDescription(offer)
+    answer = await peer.set_session_description(offer)
+    peers.add(peer)
 
-    answer = await peer_connection.createAnswer()
-    await peer_connection.setLocalDescription(answer)
-
-    async def on_session_message(session: gclient.Session, channel):
-        while True:
-            try:
-                data = await session.reader.read_frame()
-                # logger.info(f"RTC data with size {len(data)}")
-
-                channel.send(data)
-            except asyncio.CancelledError:
-                await session.close()
-                logger.info("P2P task cancelled")
-                return
-            # except aiortc.errors.InvalidStateError:
-            #     logger.error("Invalid state error")
-            #     break
-
-    @peer_connection.on("datachannel")
-    def on_datachannel(channel):
-        logger.info(f"{channel.label}: created by remote party")
-
-        asyncio.create_task(on_session_message(session, channel))
-
-        @channel.on("message")
-        async def on_message(message):
-            logger.info(f"{channel.label}: message: {len(message)}")
-
-            await session.writer.write_frame(message)
-
-    # tg.create_task(glonax_p2p(peer_connection))
-
-    return peer_connection.localDescription.sdp
+    return answer.sdp
 
 
 async def websocket(
