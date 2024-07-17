@@ -175,10 +175,6 @@ async def glonax():
         logger.error(f"Glonax connection error: {e}")
 
 
-def rpc_echo(input):
-    return input
-
-
 async def rpc_reboot():
     if await System.is_sudo():
         logger.info("Rebooting system")
@@ -340,13 +336,22 @@ async def rpc_setup_rtc(sdp: str):
 
 callables = set(
     [
-        rpc_echo,
         rpc_reboot,
         rpc_systemctl,
         rpc_apt,
         rpc_setup_rtc,
     ]
 )
+
+
+def rpc_call(func):
+    callables.add(func)
+    return func
+
+
+@rpc_call
+def rpc_echo(input):
+    return input
 
 
 async def websocket():
