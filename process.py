@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 class System:
     """A class that provides methods for system operations."""
 
+    @staticmethod
     async def is_sudo() -> bool:
         """Check if the current user has sudo privileges.
 
@@ -30,6 +31,7 @@ class System:
             logger.error(f"Error checking sudo: {e}")
             return False
 
+    @staticmethod
     async def reboot() -> bool:
         """Reboot the system.
 
@@ -57,6 +59,7 @@ class System:
             logger.error(f"Error rebooting system: {e}")
             return False
 
+    @staticmethod
     async def systemctl(action: str, service_name: str | None = None) -> bool:
         """Execute a systemctl command.
 
@@ -91,6 +94,7 @@ class System:
             logger.error(f"Error during systemctl {action}: {e}")
             return False
 
+    @staticmethod
     async def apt(action: str, package_name: str | None = None) -> bool:
         """Execute an apt command.
 

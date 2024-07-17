@@ -136,69 +136,43 @@ async def create_webrtc_stream(
             logger.error(f"Unknown error: {e}")
 
 
-# TODO: Should only connect once
-async def glonax(signal_channel: Channel[Message], command_channel: Channel[Message]):
+async def glonax():
     global INSTANCE, instance_event
 
     logger.info("Starting glonax task")
 
     path = config["glonax"]["unix_socket"]
 
-    while True:
-        try:
-            logger.info(f"Connecting to glonax at {path}")
+    try:
+        logger.info(f"Connecting to glonax at {path}")
 
-            # TODO: Wrap in single function
-            user_agent = "glonax-agent/1.0"
-            async with await gclient.open_session(
-                path, user_agent=user_agent
-            ) as session:
-                logger.info(f"Glonax connected to {path}")
-                logger.info(f"Instance ID: {session.instance.id}")
-                logger.info(f"Instance model: {session.instance.model}")
-                logger.info(f"Instance type: {session.instance.machine_type}")
-                logger.info(f"Instance version: {session.instance.version_string}")
-                logger.info(f"Instance serial number: {session.instance.serial_number}")
+        user_agent = "glonax-agent/1.0"
+        async with await gclient.open_session(path, user_agent=user_agent) as session:
+            logger.info(f"Glonax connected to {path}")
+            logger.info(f"Instance ID: {session.instance.id}")
+            logger.info(f"Instance model: {session.instance.model}")
+            logger.info(f"Instance type: {session.instance.machine_type}")
+            logger.info(f"Instance version: {session.instance.version_string}")
+            logger.info(f"Instance serial number: {session.instance.serial_number}")
 
-                INSTANCE = session.instance
-                instance_event.set()
+            INSTANCE = session.instance
+            instance_event.set()
 
-                logger.debug("Instance event set")
+            logger.debug("Instance event set")
 
-                with open("instance.dat", "wb") as f:
-                    pickle.dump(session.instance, f)
+            with open("instance.dat", "wb") as f:
+                pickle.dump(session.instance, f)
 
-                return
-
-                # async def read_command_channel():
-                #     async for message in command_channel:
-                #         await session.writer.motion(message.payload)
-
-                # async def read_session():
-                #     while True:
-                #         try:
-                #             message = await session.recv_message()
-                #             if message is not None:
-                #                 signal_channel.put_nowait(message)
-
-                #         except ChannelFull:
-                #             logger.debug("Glonax signal channel is full")
-
-                # await asyncio.gather(read_command_channel(), read_session())
-
-        except asyncio.CancelledError:
-            logger.info("Glonax task cancelled")
-            return
-        except ChannelClosed:
-            logger.error("Glonax channel closed")
-            return
-        except asyncio.IncompleteReadError as e:
-            logger.error("Glonax disconnected")
-        except ConnectionError as e:
-            logger.error(f"Glonax connection error: {e}")
-
-        logger.info("Reconnecting glonax...")
-        await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        logger.info("Glonax task cancelled")
+        return
+    except ChannelClosed:
+        logger.error("Glonax channel closed")
+        return
+    except asyncio.IncompleteReadError as e:
+        logger.error("Glonax disconnected")
+    except ConnectionError as e:
+        logger.error(f"Glonax connection error: {e}")
 
 
 def rpc_echo(input):
