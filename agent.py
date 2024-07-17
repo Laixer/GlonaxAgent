@@ -245,6 +245,44 @@ async def glonax_p2p(peer_connection: RTCPeerConnection):
     #         return
 
 
+def rpc_echo(input):
+    return input
+
+
+def rpc_reboot():
+    # proc_reboot()
+    pass
+
+
+def rpc_systemctl(operation: str, service: str):
+    # services = ["glonax", "glonax-agent", "glonax-inpput"]
+    # if service in services:
+    #     proc_service_restart(service_name)
+    pass
+
+
+def rpc_apt(operation: str, package: str):
+    pass
+
+
+async def rpc_setup_rtc(sdp: str):
+    logger.info("Received RTC setup command")
+
+    # TODO: Check how many peer connections we can have
+
+    peer_connection = RTCPeerConnection()
+
+    offer = RTCSessionDescription(type="offer", sdp=sdp)
+    await peer_connection.setRemoteDescription(offer)
+
+    answer = await peer_connection.createAnswer()
+    await peer_connection.setLocalDescription(answer)
+
+    # tg.create_task(glonax_p2p(peer_connection))
+
+    return peer_connection.localDescription.sdp
+
+
 async def websocket(
     signal_channel: Channel[Message], command_channel: Channel[Message]
 ):
@@ -256,9 +294,9 @@ async def websocket(
 
     logger.info("Starting websocket task")
 
-    engine_detector = MessageChangeDetector()
-    motion_detector = MessageChangeDetector()
-    status_detector = StatusChangeDetector()
+    # engine_detector = MessageChangeDetector()
+    # motion_detector = MessageChangeDetector()
+    # status_detector = StatusChangeDetector()
 
     base_url = (
         config["server"]["base_url"]
@@ -275,105 +313,28 @@ async def websocket(
             async with websockets.connect(uri) as websocket:
                 logger.info(f"Websocket connected to {uri}")
 
-                # async def read_signal_channel():
-                #     async for message in signal_channel:
-                #         if message.topic == "engine":
-                #             if engine_detector.process_message(message):
-                #                 await websocket.send(message.model_dump_json())
-                #         elif message.topic == "status":
-                #             if status_detector.process_status(message.payload):
-                #                 await websocket.send(message.model_dump_json())
-                #         elif message.topic == "motion":
-                #             if motion_detector.process_message(message):
-                #                 await websocket.send(message.model_dump_json())
+                callables = set(
+                    [
+                        rpc_echo,
+                        rpc_reboot,
+                        rpc_systemctl,
+                        rpc_apt,
+                        rpc_setup_rtc,
+                    ]
+                )
 
-                def rpc_echo(input):
-                    return input
-
-                def rpc_reboot():
-                    # proc_reboot()
-                    pass
-
-                def rpc_systemctl(operation: str, service: str):
-                    # services = ["glonax", "glonax-agent", "glonax-inpput"]
-                    # if service in services:
-                    #     proc_service_restart(service_name)
-                    pass
-
-                def rpc_apt(operation: str, package: str):
-                    pass
-
-                def rpc_setup_rtc(offer: RTCSessionDescription):
-                    pass
-
-                async def jsonrpc_handler():
-                    callables = set(
-                        [
-                            rpc_echo,
-                            rpc_reboot,
-                            rpc_systemctl,
-                            rpc_apt,
-                            rpc_setup_rtc,
-                        ]
-                    )
-
-                    while True:
-                        message = await websocket.recv()
-                        response = await rpc.invoke(callables, message)
-                        if response is not None:
-                            await websocket.send(response.json())
-
-                # async def read_socket():
-                #     while True:
-                #         try:
-                #             # TODO: We can just accept a JSON-RPC dispatch
-                #             message = await websocket.recv()
-
-                #             # TODO: Dont let pydantic determine the payload type
-                #             message = Message.model_validate_json(message)
-                #             if message.type == ChannelMessageType.COMMAND:
-                #                 if message.topic == "process":
-                #                     logger.info("Received process command")
-                #                     # await proc_reboot()
-                #                     # await proc_service_restart("glonax")
-                #                     # TODO: Add process command handler
-                #                 else:
-                #                     command_channel.put_nowait(message)
-                #             elif message.type == ChannelMessageType.PEER:
-                #                 if message.topic == "offer":
-                #                     logger.info("RTC Offer: Creating peer connection")
-                #                     offer = message.payload
-
-                #                     default_camera = "linux_usbcam"
-                #                     answer = await create_webrtc_stream(
-                #                         offer, default_camera
-                #                     )
-                #                     await websocket.send(answer.model_dump_json())
-
-                #                     # peer_connection = RTCPeerConnection()
-
-                #                     # await peer_connection.setRemoteDescription(offer)
-
-                #                     # answer = await peer_connection.createAnswer()
-                #                     # await peer_connection.setLocalDescription(answer)
-                #                     # await websocket.send(
-                #                     #     peer_connection.localDescription
-                #                     # )
-
-                #         except ChannelFull:
-                #             logger.warning("Websocket command channel is full")
-                #         except ValidationError as e:
-                #             logger.error(f"Validation error: {e}")
-
-                # await asyncio.gather(read_signal_channel(), read_socket())
-                await jsonrpc_handler()
+                while True:
+                    message = await websocket.recv()
+                    response = await rpc.invoke(callables, message)
+                    if response is not None:
+                        await websocket.send(response.json())
 
         except asyncio.CancelledError:
             logger.info("Websocket reader cancelled")
             return
-        except ChannelClosed:
-            logger.error("Websocket channel closed")
-            return
+        # except ChannelClosed:
+        #     logger.error("Websocket channel closed")
+        #     return
         except websockets.ConnectionClosed:
             logger.info("Websocket connection closed")
         except TimeoutError:
