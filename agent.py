@@ -291,11 +291,16 @@ async def rpc_setup_rtc(sdp: str):
 
     logger.info("Setting up RTC connection")
 
-    # # TODO: Check how many peer connections we can have
+    # FUTURE: Support multiple RTC connections
+    if len(peers) > 0:
+        logger.error("RTC connection already established")
+        return None
 
+    # TODO: Let 'RTCGlonaxPeerConnection' add itself to the set
     peer = RTCGlonaxPeerConnection(path)
     offer = RTCSessionDescription(type="offer", sdp=sdp)
     answer = await peer.set_session_description(offer)
+
     peers.add(peer)
 
     return answer.sdp
@@ -513,10 +518,6 @@ async def main():
         await remote_address()
 
         async with asyncio.TaskGroup() as tg:
-            # signal_channel: Channel[str] = Channel(8)
-            # comamnd_channel: Channel[str] = Channel(8)
-
-            # TODO: Add GPS task
             task1 = tg.create_task(glonax())
             # task2 = tg.create_task(gps_handler())
             task3 = tg.create_task(websocket())
