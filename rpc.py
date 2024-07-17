@@ -1,5 +1,8 @@
-import asyncio
 import json
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class JSONRPCRequest:
@@ -63,6 +66,8 @@ class JSONRPCInvalidParams(JSONRPCError):
         super().__init__(id, -32602, message="Invalid params", jsonrpc="2.0")
 
 
+# TODO: Catch erros from function call
+# TODO: Add logging
 async def invoke(
     callables: set, input: str | dict, prefix: str = "rpc_"
 ) -> JSONRPCResponse | JSONRPCError | None:
@@ -96,5 +101,6 @@ async def invoke(
         return JSONRPCParseError()
     except TypeError:
         return JSONRPCInvalidParams(0)
-    except Exception:
+    except Exception as e:
+        logger.error(e)
         return JSONRPCError(0, -32603, "Internal error")
