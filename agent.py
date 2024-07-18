@@ -222,8 +222,7 @@ class RTCGlonaxPeerConnection:
             @channel.on("message")
             async def on_message(message):
                 if channel.label == "command" and self.__glonax_session is not None:
-                    # logger.info(f"{channel.label}: message: {len(message)}")
-                    await self.__glonax_session.writer.motion(message)
+                    await self.__glonax_session.writer.write_frame(message)
 
     @property
     def user_agent(self) -> str:
