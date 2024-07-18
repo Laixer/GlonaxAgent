@@ -3,7 +3,7 @@ from enum import Enum, IntEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class ControlType(IntEnum):

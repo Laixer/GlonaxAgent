@@ -47,20 +47,24 @@ class GpsdClient:
         resp = await self.reader.readline()
         cls = json.loads(resp).get("class")
 
-        if cls == "VERSION":
-            return Version.model_validate_json(resp)
-        elif cls == "DEVICES":
-            return Devices.model_validate_json(resp)
-        elif cls == "WATCH":
-            return Watch.model_validate_json(resp)
-        elif cls == "TPV":
-            return TPV.model_validate_json(resp)
-        elif cls == "SKY":
-            return Sky.model_validate_json(resp)
-        elif cls == "POLL":
-            return Poll.model_validate_json(resp)
-        else:
-            print("Unknown class:", cls)
+        try:
+            if cls == "VERSION":
+                return Version.model_validate_json(resp)
+            elif cls == "DEVICES":
+                return Devices.model_validate_json(resp)
+            elif cls == "WATCH":
+                return Watch.model_validate_json(resp)
+            elif cls == "TPV":
+                return TPV.model_validate_json(resp)
+            elif cls == "SKY":
+                return Sky.model_validate_json(resp)
+            elif cls == "POLL":
+                return Poll.model_validate_json(resp)
+            else:
+                print("Unknown class:", cls)
+        except Exception as e:
+            print(resp)
+            raise e
 
         # return Response.model_validate_json(resp)
 
