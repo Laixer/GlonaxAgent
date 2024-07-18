@@ -22,12 +22,6 @@ class GpsdClient:
 
         self.watch_config = watch_config
 
-    def __getattr__(self, item):
-        if item in ("reader", "writer"):
-            # raise GpsdClientError("Initiate connection with client.connect()")
-            raise AttributeError(item)
-        raise AttributeError(item)
-
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
