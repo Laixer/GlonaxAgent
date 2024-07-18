@@ -173,7 +173,12 @@ async def glonax():
         logger.error(f"Glonax connection error: {e}")
 
 
+peers = set()
+
+
 class RTCGlonaxPeerConnection:
+    global peers
+
     def __init__(self, socket_path: str, user_agent: str = "glonax-rtc/1.0"):
         self.__socket_path = socket_path
         self.__user_agent = user_agent
@@ -207,6 +212,9 @@ class RTCGlonaxPeerConnection:
             if self.__peer_connection.connectionState == "failed":
                 await self.__peer_connection.close()
                 await self._stop()
+            elif self.__peer_connection.connectionState == "connected":
+                logger.info("RTC connection established")
+                peers.add(self)
             elif self.__peer_connection.connectionState == "closed":
                 await self._stop()
 
@@ -280,9 +288,7 @@ class RTCGlonaxPeerConnection:
             await self.__glonax_session.close()
         # TODO: We should not be calling this
         self.__webcam._stop(self.__webcam.video)
-
-
-peers = set()
+        peers.remove(self)
 
 
 async def rpc_setup_rtc(sdp: str):
@@ -295,12 +301,9 @@ async def rpc_setup_rtc(sdp: str):
         logger.error("RTC connection already established")
         return None
 
-    # TODO: Let 'RTCGlonaxPeerConnection' add itself to the set
     peer = RTCGlonaxPeerConnection(path)
     offer = RTCSessionDescription(type="offer", sdp=sdp)
     answer = await peer.set_session_description(offer)
-
-    peers.add(peer)
 
     return answer.sdp
 
