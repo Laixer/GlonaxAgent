@@ -457,7 +457,7 @@ async def gps_handler():
                             logger.info(
                                 f"GPS: Mode:{result.mode}; LatLong({result.lat}, {result.lon}); Altitude: {result.alt}; Speed: {result.speed}; Climb: {result.climb}"
                             )
-                            i = i + 1
+                        i = i + 1
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
