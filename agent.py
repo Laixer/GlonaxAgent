@@ -438,6 +438,7 @@ async def update_telemetry():
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
 
+
 # TODO: This is experimental
 async def gps_handler():
     from gps import client
@@ -449,11 +450,14 @@ async def gps_handler():
     while True:
         try:
             async with client.GpsdClient(HOST, PORT) as client:
+                i = 0
                 async for result in client:
                     if isinstance(result, TPV):
-                        logger.info(
-                            f"GPS: Mode:{result.mode}; LatLong({result.lat}, {result.lon}); Altitude: {result.alt}; Speed: {result.speed}; Climb: {result.climb}"
-                        )
+                        if i % 30 == 0:
+                            logger.info(
+                                f"GPS: Mode:{result.mode}; LatLong({result.lat}, {result.lon}); Altitude: {result.alt}; Speed: {result.speed}; Climb: {result.climb}"
+                            )
+                            i = 0
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
