@@ -241,10 +241,10 @@ class RTCGlonaxPeerConnection:
             # TODO: Maybe move this to the glonax reader
             except asyncio.IncompleteReadError as e:
                 logger.error("Glonax disconnected")
-                break
+                await asyncio.sleep(1)
             except ConnectionError as e:
                 logger.error(f"Glonax connection error: {e}")
-                break
+                await asyncio.sleep(1)
 
     async def __start_glonax(self) -> None:
         logger.debug("Open gloanx session to %s", self.__socket_path)
