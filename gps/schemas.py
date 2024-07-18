@@ -37,16 +37,16 @@ class Version(BaseModel):
 class Device(BaseModel):
     # class_: Literal["DEVICE"] = Field(alias="class")
     path: str
-    driver: str
-    subtype: str
-    activated: datetime
-    flags: int
-    native: int
-    bps: int
-    parity: str
-    stopbits: int
-    cycle: float
-    mincycle: float
+    driver: str | None = None
+    subtype: str | None = None
+    activated: datetime | None = None
+    flags: int | None = None
+    native: int | None = None
+    bps: int | None = None
+    parity: str | None = None
+    stopbits: int | None = None
+    cycle: float | None = None
+    mincycle: float | None = None
 
 
 class Devices(BaseModel):
