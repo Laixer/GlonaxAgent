@@ -267,6 +267,10 @@ class RTCGlonaxPeerConnection:
         peers.remove(self)
 
 
+dispatcher = jsonrpc.Dispatcher()
+
+
+@dispatcher.rpc_call
 async def rpc_setup_rtc(sdp: str):
     path = config["glonax"]["unix_socket"]
 
@@ -284,19 +288,7 @@ async def rpc_setup_rtc(sdp: str):
     return answer.sdp
 
 
-callables = set(
-    [
-        rpc_setup_rtc,
-    ]
-)
-
-
-def rpc_call(func):
-    callables.add(func)
-    return func
-
-
-@rpc_call
+@dispatcher.rpc_call
 async def reboot():
     if await System.is_sudo():
         logger.info("Rebooting system")
@@ -305,7 +297,7 @@ async def reboot():
         logger.error("User does not have sudo privileges")
 
 
-@rpc_call
+@dispatcher.rpc_call
 async def systemctl(operation: str, service: str):
     # services = ["glonax", "glonax-agent", "glonax-inpput"]
     # if service in services:
@@ -317,7 +309,7 @@ async def systemctl(operation: str, service: str):
         logger.error("User does not have sudo privileges")
 
 
-@rpc_call
+@dispatcher.rpc_call
 async def apt(operation: str, package: str):
     if await System.is_sudo():
         logger.info(f"Running apt {operation} {package}")
@@ -326,7 +318,7 @@ async def apt(operation: str, package: str):
         logger.error("User does not have sudo privileges")
 
 
-@rpc_call
+@dispatcher.rpc_call
 def echo(input):
     return input
 
@@ -361,7 +353,7 @@ async def websocket():
 
                 while True:
                     message = await websocket.recv()
-                    response = await jsonrpc.invoke(callables, message)
+                    response = await dispatcher(message)
                     if response is not None:
                         await websocket.send(response.json())
 

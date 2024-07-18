@@ -176,3 +176,49 @@ async def invoke(
     except Exception as e:
         logger.error(f"Internal error: {str(e)}", exc_info=True)
         return JSONRPCError(data.get("id", None), -32603, "Internal error")
+
+
+class Dispatcher(set):
+    """
+    A class that represents a JSON-RPC dispatcher.
+
+    The Dispatcher class is used to register and invoke JSON-RPC methods.
+
+    Attributes:
+        None
+
+    Methods:
+        rpc_call: Registers a JSON-RPC method.
+        __call__: Invokes the registered JSON-RPC methods.
+
+    """
+
+    def rpc_call(self, func):
+        """
+        Registers a JSON-RPC method.
+
+        Args:
+            func: The JSON-RPC method to register.
+
+        Returns:
+            None
+
+        """
+        self.add(func)
+
+    def __call__(
+        self, input: str | dict | list
+    ) -> JSONRPCResponse | JSONRPCError | None:
+        """
+        Invokes the registered JSON-RPC methods.
+
+        Args:
+            input: The JSON-RPC request input.
+
+        Returns:
+            JSONRPCResponse: The JSON-RPC response.
+            JSONRPCError: The JSON-RPC error response.
+            None: If no matching method is found.
+
+        """
+        return invoke(self, input)
