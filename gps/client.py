@@ -1,6 +1,6 @@
 import asyncio
 
-from gps.schemas import TPV, Devices, Response, Sky, Version, Watch, Poll
+from gps.schemas import TPV, Device, Devices, Response, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
 WATCH = "?WATCH={}\r\n"
@@ -52,6 +52,8 @@ class GpsdClient:
                 return Version.model_validate_json(resp)
             elif cls == "DEVICES":
                 return Devices.model_validate_json(resp)
+            elif cls == "DEVICE":
+                return Device.model_validate_json(resp)
             elif cls == "WATCH":
                 return Watch.model_validate_json(resp)
             elif cls == "TPV":
