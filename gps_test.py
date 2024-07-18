@@ -8,11 +8,14 @@ async def main():
     PORT = 2947
 
     async with client.GpsdClient(HOST, PORT) as client:
-        print(await client.poll())  # Get gpsd POLL response
-        while True:
-            await asyncio.sleep(1)
-            # print("")
-            # print(await client.get_result())  # Get gpsd TPV responses
+        async for result in client:
+            print("\n")
+            print(result)
+        # while True:
+        #     await client.poll()
+        #     await asyncio.sleep(1)
+        # print("")
+        # print(await client.get_result())  # Get gpsd TPV responses
 
 
 if __name__ == "__main__":
