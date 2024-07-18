@@ -83,8 +83,8 @@ class TPV(BaseModel):
 class PRN(BaseModel):
     PRN: int
     el: float | None = None
-    az: float
-    ss: float
+    az: float | None = None
+    ss: float | None = None
     used: bool
     gnssid: int
     svid: int
