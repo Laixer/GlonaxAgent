@@ -112,31 +112,6 @@ async def remote_address():
             logger.error(f"Unknown error: {e}")
 
 
-# async def create_webrtc_stream(
-#     description: RTCSessionDescription, name: str
-# ) -> Message:
-#     async with httpx.AsyncClient() as client:
-#         try:
-#             go2rtc_base_url = "http://localhost:1984/api"
-#             response = await client.post(
-#                 f"{go2rtc_base_url}/webrtc?src={name}", json=description.model_dump()
-#             )
-#             response.raise_for_status()
-#             response_data = response.json()
-
-#             peer = RTCSessionDescription(type="answer", sdp=response_data["sdp"])
-#             return Message(type=ChannelMessageType.PEER, topic="answer", payload=peer)
-
-#         except (
-#             httpx.HTTPStatusError,
-#             httpx.ConnectTimeout,
-#             httpx.ConnectError,
-#         ) as e:
-#             logger.error(f"HTTP Error: {e}")
-#         except Exception as e:
-#             logger.error(f"Unknown error: {e}")
-
-
 async def glonax():
     global INSTANCE, instance_event
 
@@ -170,7 +145,8 @@ async def glonax():
     except asyncio.IncompleteReadError as e:
         logger.error("Glonax disconnected")
     except ConnectionError as e:
-        logger.error(f"Glonax connection error: {e}")
+        logger.debug(f"Glonax connection error: {e}")
+        logger.error("Glonax is not running")
 
 
 peers = set()
