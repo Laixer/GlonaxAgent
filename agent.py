@@ -441,32 +441,37 @@ async def update_telemetry():
 
 async def gps_handler():
     from gps import client
+    from gps.schemas import TPV
 
     HOST = "127.0.0.1"
     PORT = 2947
 
-    async with client.GpsdClient(HOST, PORT) as client:
-        print(await client.poll())  # Get gpsd POLL response
-        while True:
-            print(await client.get_result())  # Get gpsd TPV responses
+    while True:
+        try:
+            async with client.GpsdClient(HOST, PORT) as client:
+                async for result in client:
+                    # print("\n")
+                    # print(result)
 
-    # try:
-    #     async with gps.aiogps.aiogps(
-    #         connection_args={"host": "192.168.10.116", "port": 2947},
-    #         connection_timeout=5,
-    #         reconnect=0,  # do not try to reconnect, raise exceptions
-    #         alive_opts={"rx_timeout": 5},
-    #     ) as gpsd:
-    #         async for msg in gpsd:
-    #             logging.info(msg)
-    # except asyncio.CancelledError:
-    #     return
-    # except asyncio.IncompleteReadError:
-    #     logging.info("Connection closed by server")
-    # except asyncio.TimeoutError:
-    #     logging.error("Timeout waiting for gpsd to respond")
-    # except Exception as exc:
-    #     logging.error(f"Error: {exc}")
+                    if isinstance(result, TPV):
+                        logger.info(f"GPS time: {result.time}")
+                        logger.info(f"GPS FIX: {result.mode}")
+                # while True:
+                #     await client.poll()
+                #     await asyncio.sleep(1)
+                # print("")
+                # print(await client.get_result())  # Get gpsd TPV responses
+
+        except asyncio.CancelledError:
+            logger.info("GPS handler cancelled")
+            return
+        except asyncio.IncompleteReadError as e:
+            logger.error("GPS disconnected")
+            await asyncio.sleep(1)
+        except ConnectionError as e:
+            logger.debug(f"GPS connection error: {e}")
+            logger.error("GPS is not running")
+            await asyncio.sleep(1)
 
 
 async def main():
@@ -489,7 +494,7 @@ async def main():
 
         async with asyncio.TaskGroup() as tg:
             task1 = tg.create_task(glonax())
-            # task2 = tg.create_task(gps_handler())
+            task2 = tg.create_task(gps_handler())
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
