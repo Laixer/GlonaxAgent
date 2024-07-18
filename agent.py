@@ -438,7 +438,7 @@ async def update_telemetry():
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
 
-
+# TODO: This is experimental
 async def gps_handler():
     from gps import client
     from gps.schemas import TPV
@@ -450,17 +450,10 @@ async def gps_handler():
         try:
             async with client.GpsdClient(HOST, PORT) as client:
                 async for result in client:
-                    # print("\n")
-                    # print(result)
-
                     if isinstance(result, TPV):
-                        logger.info(f"GPS time: {result.time}")
-                        logger.info(f"GPS FIX: {result.mode}")
-                # while True:
-                #     await client.poll()
-                #     await asyncio.sleep(1)
-                # print("")
-                # print(await client.get_result())  # Get gpsd TPV responses
+                        logger.info(
+                            f"GPS: Mode:{result.mode}; LatLong({result.lat}, {result.lon}); Altitude: {result.alt}; Speed: {result.speed}; Climb: {result.climb}"
+                        )
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
