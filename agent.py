@@ -460,7 +460,7 @@ async def gps():
                     if isinstance(result, TPV):
                         if i % 30 == 0:
                             logger.info(
-                                f"GPS: Mode:{result.mode}; LatLong({result.lat}, {result.lon}); Altitude: {result.alt}; Speed: {result.speed}; Climb: {result.climb}"
+                                f"GPS: Mode:{str(result.mode)} LatLong({result.lat}, {result.lon}) Altitude: {result.alt} Speed: {result.speed} Climb: {result.climb}"
                             )
                         i = i + 1
 
