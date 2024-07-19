@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
 
@@ -50,7 +51,8 @@ class Devices(BaseModel):
     devices: list[Device]
 
 
-class TPV(BaseModel):
+@dataclass
+class TPV:
     device: str | None = None
     mode: Mode
     time: datetime | None = None
