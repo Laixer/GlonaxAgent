@@ -40,9 +40,6 @@ class GpsdClient:
     def __class_factory(data: dict) -> object:
         class_type = data.get("class").upper()
 
-        excluded_keys = ["class"]
-        filtered_data = {k: v for k, v in data.items() if k not in excluded_keys}
-
         match class_type:
             case "TPV":
                 return TPV.from_json(data)
