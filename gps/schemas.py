@@ -183,6 +183,7 @@ class OSC:
 @dataclass
 class PRN:
     PRN: int
+    used: bool
     az: float | None = None
     el: float | None = None
     freqid: int | None = None
@@ -191,11 +192,11 @@ class PRN:
     ss: float | None = None
     sigid: int | None = None
     svid: int | None = None
-    used: bool
 
 
 @dataclass
 class Sky:
+    time: datetime
     device: str | None = None
     nSat: int | None = None
     gdop: float | None = None
@@ -207,7 +208,6 @@ class Sky:
     qual: float | None = None
     satellites: list[PRN] | None = None
     tdop: float | None = None
-    time: datetime
     uSat: int | None = None
     vdop: float | None = None
     xdop: float | None = None
