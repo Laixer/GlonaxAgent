@@ -6,8 +6,8 @@ from enum import IntEnum
 class Mode(IntEnum):
     UNKNOWN = 0
     NO_FIX = 1
-    TWO_D_FIX = 2
-    THREE_D_FIX = 3
+    D2_FIX = 2
+    D3_FIX = 3
 
     def __str__(self) -> str:
         return self.name
@@ -61,33 +61,57 @@ class Devices:
 class TPV:
     device: str | None = None
     mode: Mode = Mode.UNKNOWN
-    time: datetime | None = None
-    ept: float | None = None
-    lat: float | None = None
-    lon: float | None = None
+    alt: float | None = None  # Deprecated
     altHAE: float | None = None
     altMSL: float | None = None
-    alt: float | None = None
-    epx: float | None = None
-    epy: float | None = None
-    epv: float | None = None
-    track: float | None = None
-    magtrack: float | None = None
-    magvar: float | None = None
-    speed: float | None = None
+    ant: float | None = None
     climb: float | None = None
-    eps: float | None = None
-    epc: float | None = None
-    geoidSep: float | None = None
-    eph: float | None = None
-    sep: float | None = None
-    leapseconds: int | None = None
+    clockbias: float | None = None
+    clockdrift: float | None = None
+    datum: str | None = None
+    depth: float | None = None
+    dgpsAge: float | None = None
+    dgpsSta: int | None = None
     ecefx: float | None = None
     ecefy: float | None = None
     ecefz: float | None = None
+    ecefpAcc: float | None = None
     ecefvx: float | None = None
     ecefvy: float | None = None
     ecefvz: float | None = None
+    ecefvAcc: float | None = None
+    epc: float | None = None
+    epd: float | None = None
+    eph: float | None = None
+    eps: float | None = None
+    ept: float | None = None
+    epx: float | None = None
+    epy: float | None = None
+    epv: float | None = None
+    geoidSep: float | None = None
+    jam: float | None = None
+    lat: float | None = None
+    leapseconds: int | None = None
+    lon: float | None = None
+    magtrack: float | None = None
+    magvar: float | None = None
+    relD: float | None = None
+    relE: float | None = None
+    relN: float | None = None
+    sep: float | None = None
+    speed: float | None = None
+    temp: float | None = None
+    time: datetime | None = None
+    track: float | None = None
+    velD: float | None = None
+    velE: float | None = None
+    velN: float | None = None
+    wanglem: float | None = None
+    wangler: float | None = None
+    wanglet: float | None = None
+    wspeedr: float | None = None
+    wspeedt: float | None = None
+    wtemp: float | None = None
 
 
 @dataclass
