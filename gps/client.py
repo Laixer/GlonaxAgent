@@ -53,15 +53,15 @@ class GpsdClient:
             case "DEVICE":
                 return Device.from_json(data)
             case "WATCH":
-                return Watch(**filtered_data)
+                return Watch.from_json(data)
             case "SKY":
                 return Sky.from_json(data)
             case "POLL":
-                return Poll(**filtered_data)
+                return Poll.from_json(data)
             case "GST":
-                return GST(**filtered_data)
+                return GST.from_json(data)
             case "ERROR":
-                error = Error(**filtered_data)
+                error = Error.from_json(data)
                 raise ValueError(f"Error: {error.message}")
             case _:
                 raise ValueError(f"Unknown type: {data.get('class')}")

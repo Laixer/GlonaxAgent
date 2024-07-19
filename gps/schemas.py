@@ -26,6 +26,11 @@ class Watch:
     remote: str = ""
     timing: bool | None = False  # Undocumented
 
+    @staticmethod
+    def from_json(data: dict) -> "Watch":
+        filtered_data = {k: v for k, v in data.items() if k in Watch.__annotations__}
+        return Watch(**filtered_data)
+
 
 @dataclass
 class Version:
@@ -157,6 +162,11 @@ class GST:
     vn: float | None = None
     vu: float | None = None
 
+    @staticmethod
+    def from_json(data: dict) -> "GST":
+        filtered_data = {k: v for k, v in data.items() if k in GST.__annotations__}
+        return GST(**filtered_data)
+
 
 # TODO: Check
 @dataclass
@@ -247,6 +257,11 @@ class Poll:
     tpv: list[TPV]
     sky: list[Sky]
 
+    @staticmethod
+    def from_json(data: dict) -> "Poll":
+        filtered_data = {k: v for k, v in data.items() if k in Poll.__annotations__}
+        return Poll(**filtered_data)
+
 
 @dataclass
 class Error:
@@ -254,3 +269,8 @@ class Error:
 
     def __str__(self) -> str:
         return self.message
+
+    @staticmethod
+    def from_json(data: dict) -> "Error":
+        filtered_data = {k: v for k, v in data.items() if k in Error.__annotations__}
+        return Error(**filtered_data)
