@@ -22,8 +22,8 @@ class Watch:
     scaled: bool | None = False
     split24: bool | None = False
     pps: bool | None = False
-    device: str | None = None
-    remote: str | None = None
+    device: str = ""
+    remote: str = ""
 
 
 @dataclass
