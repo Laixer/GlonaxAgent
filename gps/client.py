@@ -55,7 +55,7 @@ class GpsdClient:
             case "WATCH":
                 return Watch(**filtered_data)
             case "SKY":
-                return Sky(**filtered_data)
+                return Sky.from_json(data)
             case "POLL":
                 return Poll(**filtered_data)
             case "GST":
