@@ -7,8 +7,8 @@ async def main():
     HOST = "127.0.0.1"
     PORT = 2947
 
-    async with client.GpsdClient(HOST, PORT) as client:
-        async for result in client:
+    async with await client.open(HOST, PORT) as c:
+        async for result in c:
             print(result)
 
 

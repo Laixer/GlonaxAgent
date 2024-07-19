@@ -9,6 +9,9 @@ class Mode(IntEnum):
     TWO_D_FIX = 2
     THREE_D_FIX = 3
 
+    def __str__(self) -> str:
+        return self.name
+
 
 @dataclass
 class Watch:

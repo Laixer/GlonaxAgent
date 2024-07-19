@@ -12,35 +12,24 @@ logger = logging.getLogger(__name__)
 
 
 class GpsdClient:
-    reader: asyncio.StreamReader
-    writer: asyncio.StreamWriter
-    version: Version
-    devices: Devices
-    watch: Watch
-    sky: Sky
-
     def __init__(
-        self, host: str = "127.0.0.1", port: int = 2947, watch_config: Watch = Watch()
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        watch_config: Watch = Watch(),
     ):
-        self.host = host
-        self.port = port
+        self.__reader = reader
+        self.__writer = writer
+
+        self._version = None
+        self._devices = None
+        self._watch = None
 
         self.watch_config = watch_config
 
     async def __read(self) -> dict:
         data = await self.__reader.readline()
         return json.loads(data)
-
-    # TODO: Move out of class
-    async def connect(self):
-        self.__reader, self.__writer = await asyncio.open_connection(
-            self.host, self.port
-        )
-
-        wd = asdict(self.watch_config)
-
-        self.__writer.write(WATCH.format(json.dumps(wd)).encode())
-        await self.__writer.drain()
 
     async def close(self):
         await self.__writer.drain()
@@ -74,17 +63,19 @@ class GpsdClient:
 
     async def recv(self):
         data = await self.__read()
-        try:
-            result = self.__class_factory(data)
-            if isinstance(result, Version):
-                self.version = result
-            if isinstance(result, Devices):
-                self.devices = result
-            if isinstance(result, Watch):
-                self.watch = result
-            return result
-        except ValueError as e:
-            print(f"Error creating object: {e}")
+        result = self.__class_factory(data)
+        if isinstance(result, Version):
+            self._version = result
+        if isinstance(result, Devices):
+            self._devices = result
+        if isinstance(result, Watch):
+            self._watch = result
+        return result
+
+    async def watch(self):
+        wd = asdict(self.watch_config)
+        self.__writer.write(WATCH.format(json.dumps(wd)).encode())
+        await self.__writer.drain()
 
     async def poll(self):
         self.__writer.write(POLL.encode())
@@ -92,7 +83,6 @@ class GpsdClient:
         return await self.recv()
 
     async def __aenter__(self):
-        await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -109,3 +99,10 @@ class GpsdClient:
             The next item from the iterator.
         """
         return await self.recv()
+
+
+async def open(host: str = "127.0.0.1", port: int = 2947) -> GpsdClient:
+    reader, writer = await asyncio.open_connection(host, port)
+    client = GpsdClient(reader, writer)
+    await client.watch()
+    return client
