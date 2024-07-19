@@ -41,7 +41,8 @@ class Version:
 
     @staticmethod
     def from_json(data: dict) -> "Version":
-        filtered_data = {k: v for k, v in data.items() if k in Version().__dict__}
+        # filtered_data = {k: v for k, v in data.items() if k in Version.__dict__}
+        filtered_data = {k: v for k, v in data.items() if k in Version.__annotations__}
         return Version(**filtered_data)
 
 
@@ -65,7 +66,8 @@ class Device:
 
     @staticmethod
     def from_json(data: dict) -> "Device":
-        filtered_data = {k: v for k, v in data.items() if k in Device().__dict__}
+        # filtered_data = {k: v for k, v in data.items() if k in Device().__dict__}
+        filtered_data = {k: v for k, v in data.items() if k in Device.__annotations__}
         return Device(**filtered_data)
 
 
@@ -76,7 +78,8 @@ class Devices:
 
     @staticmethod
     def from_json(data: dict) -> "Devices":
-        filtered_data = {k: v for k, v in data.items() if k in Devices().__dict__}
+        # filtered_data = {k: v for k, v in data.items() if k in Devices().__dict__}
+        filtered_data = {k: v for k, v in data.items() if k in Devices.__annotations__}
         return Devices(**filtered_data)
 
 
