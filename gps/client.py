@@ -56,8 +56,11 @@ class GpsdClient:
             data = json.loads(resp)
             class_type = data.get("class")
 
+            excluded_keys = ["class"]
+            filtered_data = {k: v for k, v in data.items() if k not in excluded_keys}
+
             if class_type == "TPV":
-                return TPV(**data)
+                return TPV(**filtered_data)
 
             # if cls == "VERSION":
             #     return Version.model_validate_json(resp)
