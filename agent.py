@@ -324,6 +324,10 @@ def echo(input):
     return input
 
 
+# TODO: Add glonax version RPC call
+# TODO: Add glomax instance RPC call
+
+
 async def websocket():
     global INSTANCE, instance_event
 
@@ -441,7 +445,7 @@ async def update_telemetry():
 
 
 # TODO: This is experimental
-async def gps_handler():
+async def gps():
     from gps import client
     from gps.schemas import TPV
 
@@ -450,9 +454,9 @@ async def gps_handler():
 
     while True:
         try:
-            async with client.GpsdClient(HOST, PORT) as client:
+            async with await client.open(HOST, PORT) as c:
                 i = 0
-                async for result in client:
+                async for result in c:
                     if isinstance(result, TPV):
                         if i % 30 == 0:
                             logger.info(
@@ -492,7 +496,7 @@ async def main():
 
         async with asyncio.TaskGroup() as tg:
             task1 = tg.create_task(glonax())
-            # task2 = tg.create_task(gps_handler())
+            task2 = tg.create_task(gps())
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
