@@ -24,7 +24,7 @@ class Watch:
     pps: bool | None = False
     device: str = ""
     remote: str = ""
-    timing: bool | None = False # Undocumented
+    timing: bool | None = False  # Undocumented
 
 
 @dataclass
@@ -120,6 +120,11 @@ class TPV:
     wspeedr: float | None = None
     wspeedt: float | None = None
     wtemp: float | None = None
+
+    @staticmethod
+    def from_json(data: dict) -> "TPV":
+        filtered_data = {k: v for k, v in data.items() if k in TPV().__dict__}
+        return TPV(**filtered_data)
 
 
 @dataclass

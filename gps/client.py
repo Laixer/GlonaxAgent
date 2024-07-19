@@ -45,8 +45,8 @@ class GpsdClient:
 
         match class_type:
             case "TPV":
-                filtered_data1 = {k: v for k, v in data.items() if k in TPV().__dict__}
-                return TPV(**filtered_data1)
+                # filtered_data = {k: v for k, v in data.items() if k in TPV().__dict__}
+                return TPV.from_json(data)
             case "VERSION":
                 return Version(**filtered_data)
             case "DEVICES":
