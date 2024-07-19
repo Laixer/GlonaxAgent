@@ -82,6 +82,9 @@ class TPV:
     eph: float | None = None
     sep: float | None = None
     leapseconds: int | None = None
+    ecefx: float | None = None
+    ecefy: float | None = None
+    ecefz: float | None = None
 
 
 @dataclass
