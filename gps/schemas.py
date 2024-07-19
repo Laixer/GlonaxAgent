@@ -86,12 +86,12 @@ class TPV:
 @dataclass
 class PRN:
     PRN: int
-    el: float | None = None
-    az: float | None = None
-    ss: float | None = None
     used: bool
     gnssid: int
     svid: int
+    el: float | None = None
+    az: float | None = None
+    ss: float | None = None
 
 
 @dataclass
@@ -104,8 +104,8 @@ class Sky:
     hdop: float | None = None
     gdop: float | None = None
     pdop: float | None = None
-    nsat: int = Field(alias="nSat")
-    usat: int = Field(alias="uSat")
+    nsat: int #= Field(alias="nSat")
+    usat: int # = Field(alias="uSat")
     satellites: list[PRN] | None = None
 
 
