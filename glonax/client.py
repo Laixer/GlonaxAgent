@@ -163,21 +163,24 @@ class GlonaxStreamReader:
         Returns:
             bytes: The frame data.
         """
-        header = await self.reader.readexactly(10)
-        if header[:3] != b"LXR":
-            raise ProtocolError("Invalid header received")
-        if header[3:4] != b"\x03":
-            raise ProtocolError("Invalid protocol version")
+        try:
+            header = await self.reader.readexactly(10)
+            if header[:3] != b"LXR":
+                raise ProtocolError("Invalid header received")
+            if header[3:4] != b"\x03":
+                raise ProtocolError("Invalid protocol version")
 
-        # message_type = MessageType(struct.unpack("B", header[4:5])[0])
-        message_length = struct.unpack(">H", header[5:7])[0]
-        if header[7:10] != b"\x00\x00\x00":
-            raise ProtocolError("Invalid header padding")
-        message = await self.reader.readexactly(message_length)
-        if len(message) != message_length:
-            raise ProtocolError("Invalid message length")
+            # message_type = MessageType(struct.unpack("B", header[4:5])[0])
+            message_length = struct.unpack(">H", header[5:7])[0]
+            if header[7:10] != b"\x00\x00\x00":
+                raise ProtocolError("Invalid header padding")
+            message = await self.reader.readexactly(message_length)
+            if len(message) != message_length:
+                raise ProtocolError("Invalid message length")
 
-        return header + message
+            return header + message
+        except asyncio.IncompleteReadError:
+            raise ConnectionError("Connection closed by server")
 
     async def read(self) -> tuple[MessageType, bytes]:
         """
@@ -186,21 +189,25 @@ class GlonaxStreamReader:
         Returns:
             tuple[MessageType, bytes]: A tuple containing the message type and the message data.
         """
-        header = await self.reader.readexactly(10)
-        if header[:3] != b"LXR":
-            raise ProtocolError("Invalid header received")
-        if header[3:4] != b"\x03":
-            raise ProtocolError("Invalid protocol version")
 
-        message_type = MessageType(struct.unpack("B", header[4:5])[0])
-        message_length = struct.unpack(">H", header[5:7])[0]
-        if header[7:10] != b"\x00\x00\x00":
-            raise ProtocolError("Invalid header padding")
-        message = await self.reader.readexactly(message_length)
-        if len(message) != message_length:
-            raise ProtocolError("Invalid message length")
+        try:
+            header = await self.reader.readexactly(10)
+            if header[:3] != b"LXR":
+                raise ProtocolError("Invalid header received")
+            if header[3:4] != b"\x03":
+                raise ProtocolError("Invalid protocol version")
 
-        return message_type, message
+            message_type = MessageType(struct.unpack("B", header[4:5])[0])
+            message_length = struct.unpack(">H", header[5:7])[0]
+            if header[7:10] != b"\x00\x00\x00":
+                raise ProtocolError("Invalid header padding")
+            message = await self.reader.readexactly(message_length)
+            if len(message) != message_length:
+                raise ProtocolError("Invalid message length")
+
+            return message_type, message
+        except asyncio.IncompleteReadError:
+            raise ConnectionError("Connection closed by server")
 
 
 async def open_unix_connection(

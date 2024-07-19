@@ -142,8 +142,6 @@ async def glonax():
     except asyncio.CancelledError:
         logger.info("Glonax task cancelled")
         return
-    except asyncio.IncompleteReadError as e:
-        logger.error("Glonax disconnected")
     except ConnectionError as e:
         logger.debug(f"Glonax connection error: {e}")
         logger.error("Glonax is not running")
@@ -239,10 +237,6 @@ class RTCGlonaxPeerConnection:
             except asyncio.CancelledError:
                 logger.info("Glonax task cancelled")
                 break
-            # TODO: Maybe move this to the glonax reader
-            except asyncio.IncompleteReadError as e:
-                logger.error("Glonax disconnected")
-                await asyncio.sleep(1)
             except ConnectionError as e:
                 logger.error(f"Glonax connection error: {e}")
                 await asyncio.sleep(1)
