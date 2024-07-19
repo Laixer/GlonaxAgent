@@ -54,7 +54,7 @@ class Devices(BaseModel):
 @dataclass
 class TPV:
     device: str | None = None
-    mode: Mode
+    mode: Mode = Mode.UNKNOWN
     time: datetime | None = None
     ept: float | None = None
     lat: float | None = None
