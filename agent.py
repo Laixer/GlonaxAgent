@@ -162,7 +162,8 @@ class RTCGlonaxPeerConnection:
         self.__video_track = "/dev/video0"
         self.__av_options = {
             "framerate": "30",
-            "video_size": "640x480",
+            # "video_size": "640x480",
+            "video_size": "1280x720",
             "preset": "ultrafast",
             "tune": "zerolatency",
         }
@@ -491,7 +492,7 @@ async def main():
 
         async with asyncio.TaskGroup() as tg:
             task1 = tg.create_task(glonax())
-            task2 = tg.create_task(gps_handler())
+            # task2 = tg.create_task(gps_handler())
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
