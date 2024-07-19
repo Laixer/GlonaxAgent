@@ -3,7 +3,7 @@ import json
 import logging
 from dataclasses import asdict
 
-from gps.schemas import TPV, Device, Devices, Sky, Version, Watch, Poll
+from gps.schemas import GST, TPV, Device, Devices, Error, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
 WATCH = "?WATCH={}\r\n"
@@ -58,6 +58,11 @@ class GpsdClient:
                 return Sky(**filtered_data)
             case "POLL":
                 return Poll(**filtered_data)
+            case "GST":
+                return GST(**filtered_data)
+            case "ERROR":
+                error = Error(**filtered_data)
+                raise ValueError(f"Error: {error.message}")
             case _:
                 raise ValueError(f"Unknown type: {data.get('class')}")
 

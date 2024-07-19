@@ -15,14 +15,15 @@ class Mode(IntEnum):
 
 @dataclass
 class Watch:
-    enable: bool = True
-    json: bool = True
-    split24: bool = False
-    nmea: bool = False
-    scaled: bool = False
-    pps: bool = False
-    timing: bool = False
-    raw: int = 0
+    enable: bool | None = True
+    json: bool | None = True
+    nmea: bool | None = False
+    raw: int | None = None
+    scaled: bool | None = False
+    split24: bool | None = False
+    pps: bool | None = False
+    device: str | None = None
+    remote: str | None = None
 
 
 @dataclass
@@ -31,6 +32,7 @@ class Version:
     rev: str
     proto_major: int
     proto_minor: int
+    remote: str | None = None
 
     @property
     def proto(self) -> tuple[int, int]:
@@ -39,22 +41,27 @@ class Version:
 
 @dataclass
 class Device:
-    path: str
-    driver: str | None = None
-    subtype: str | None = None
     activated: datetime | None = None
-    flags: int | None = None
-    native: int | None = None
     bps: int | None = None
-    parity: str | None = None
-    stopbits: int | None = None
     cycle: float | None = None
+    driver: str | None = None
+    flags: int | None = None
+    hexdata: str | None = None
     mincycle: float | None = None
+    native: int | None = None
+    parity: str | None = None
+    path: str | None = None
+    readonly: bool | None = None
+    sernum: str | None = None
+    stopbits: int = 1
+    subtype: str | None = None
+    subtype1: str | None = None
 
 
 @dataclass
 class Devices:
     devices: list[Device]
+    remote: str | None = None
 
 
 @dataclass
@@ -115,30 +122,96 @@ class TPV:
 
 
 @dataclass
+class GST:
+    device: str | None = None
+    time: datetime | None = None
+    rms: float | None = None
+    major: float | None = None
+    minor: float | None = None
+    orient: float | None = None
+    alt: float | None = None
+    lat: float | None = None
+    lon: float | None = None
+    ve: float | None = None
+    vn: float | None = None
+    vu: float | None = None
+
+
+# TODO: Check
+@dataclass
+class ATT:
+    device: str | None = None
+    time: datetime | None = None
+    heading: float | None = None
+    magSt: float | None = None
+    pitch: float | None = None
+    roll: float | None = None
+    yaw: float | None = None
+    dip: float | None = None
+    magLen: float | None = None
+    pitchSt: float | None = None
+    rollSt: float | None = None
+    yawSt: float | None = None
+
+
+# TODO: Check
+@dataclass
+class TOFF:
+    device: str | None = None
+    time: datetime | None = None
+    clockOffset: float | None = None
+    leapSec: int | None = None
+    leapSecErr: float | None = None
+    timeRes: float | None = None
+    timeRef: str | None = None
+
+
+# TODO: Check
+@dataclass
+class PPS:
+    device: str | None = None
+    time: datetime | None = None
+
+
+# TODO: Check
+@dataclass
+class OSC:
+    device: str | None = None
+    time: datetime | None = None
+
+
+@dataclass
 class PRN:
     PRN: int
-    used: bool
-    gnssid: int
-    svid: int
-    el: float | None = None
     az: float | None = None
+    el: float | None = None
+    freqid: int | None = None
+    gnssid: int | None = None
+    health: int | None = None
     ss: float | None = None
+    sigid: int | None = None
+    svid: int | None = None
+    used: bool
 
 
 @dataclass
 class Sky:
-    device: str
-    nSat: int
-    uSat: int
+    device: str | None = None
+    nSat: int | None = None
+    gdop: float | None = None
+    hdop: float | None = None
+    pdop: float | None = None
+    pr: float | None = None
+    prRate: float | None = None
+    prRes: float | None = None
+    qual: float | None = None
+    satellites: list[PRN] | None = None
+    tdop: float | None = None
     time: datetime
+    uSat: int | None = None
+    vdop: float | None = None
     xdop: float | None = None
     ydop: float | None = None
-    vdop: float | None = None
-    tdop: float | None = None
-    hdop: float | None = None
-    gdop: float | None = None
-    pdop: float | None = None
-    satellites: list[PRN] | None = None
 
 
 @dataclass
@@ -147,3 +220,11 @@ class Poll:
     active: int
     tpv: list[TPV]
     sky: list[Sky]
+
+
+@dataclass
+class Error:
+    message: str
+
+    def __str__(self) -> str:
+        return self.message
