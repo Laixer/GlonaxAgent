@@ -53,10 +53,11 @@ class GpsdClient:
 
         try:
             resp = await self.reader.readline()
-            class_type = json.loads(resp).get("class")
+            data = json.loads(resp)
+            class_type = data.get("class")
 
             if class_type == "TPV":
-                return TPV(**resp)
+                return TPV(**data)
 
             # if cls == "VERSION":
             #     return Version.model_validate_json(resp)
