@@ -1,11 +1,14 @@
 import asyncio
 import json
+import logging
 from dataclasses import asdict
 
 from gps.schemas import TPV, Device, Devices, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
 WATCH = "?WATCH={}\r\n"
+
+logger = logging.getLogger(__name__)
 
 
 class GpsdClient:
@@ -24,47 +27,54 @@ class GpsdClient:
 
         self.watch_config = watch_config
 
+    async def __read(self) -> dict:
+        data = await self.__reader.readline()
+        return json.loads(data)
+
+    # TODO: Move out of class
     async def connect(self):
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        self.__reader, self.__writer = await asyncio.open_connection(
+            self.host, self.port
+        )
 
         wd = asdict(self.watch_config)
 
-        self.writer.write(WATCH.format(json.dumps(wd)).encode())
-        await self.writer.drain()
+        self.__writer.write(WATCH.format(json.dumps(wd)).encode())
+        await self.__writer.drain()
 
     async def close(self):
-        self.writer.close()
-        await self.writer.wait_closed()
+        await self.__writer.drain()
+        self.__writer.close()
+        await self.__writer.wait_closed()
 
     @staticmethod
-    def __class_factory(data):
+    def __class_factory(data: dict) -> object:
         class_type = data.get("class").upper()
+
         excluded_keys = ["class"]
         filtered_data = {k: v for k, v in data.items() if k not in excluded_keys}
 
-        if class_type == "TPV":
-            return TPV(**filtered_data)
-        elif class_type == "VERSION":
-            return Version(**filtered_data)
-        elif class_type == "DEVICES":
-            return Devices(**filtered_data)
-        elif class_type == "DEVICE":
-            return Device(**filtered_data)
-        elif class_type == "WATCH":
-            return Watch(**filtered_data)
-        elif class_type == "SKY":
-            return Sky(**filtered_data)
-        elif class_type == "POLL":
-            return Poll(**filtered_data)
-        else:
-            print("Unknown class:", data)
-            raise ValueError(f"Unknown type: {data.get('class')}")
+        match class_type:
+            case "TPV":
+                return TPV(**filtered_data)
+            case "VERSION":
+                return Version(**filtered_data)
+            case "DEVICES":
+                return Devices(**filtered_data)
+            case "DEVICE":
+                return Device(**filtered_data)
+            case "WATCH":
+                return Watch(**filtered_data)
+            case "SKY":
+                return Sky(**filtered_data)
+            case "POLL":
+                return Poll(**filtered_data)
+            case _:
+                raise ValueError(f"Unknown type: {data.get('class')}")
 
-    async def get_result(self):
+    async def recv(self):
+        data = await self.__read()
         try:
-            resp = await self.reader.readline()
-            data = json.loads(resp)
-
             result = self.__class_factory(data)
             if isinstance(result, Version):
                 self.version = result
@@ -72,17 +82,14 @@ class GpsdClient:
                 self.devices = result
             if isinstance(result, Watch):
                 self.watch = result
-
             return result
-        except json.JSONDecodeError:
-            print("Invalid JSON data")
         except ValueError as e:
             print(f"Error creating object: {e}")
 
     async def poll(self):
-        self.writer.write(POLL.encode())
-        await self.writer.drain()
-        return await self.get_result()
+        self.__writer.write(POLL.encode())
+        await self.__writer.drain()
+        return await self.recv()
 
     async def __aenter__(self):
         await self.connect()
@@ -90,3 +97,15 @@ class GpsdClient:
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.close()
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        """
+        Asynchronous iterator method that returns the next item from the iterator.
+
+        Returns:
+            The next item from the iterator.
+        """
+        return await self.recv()

@@ -382,9 +382,9 @@ class Session:
         message_type, message = await self.reader.read()
         try:
             return self.__message_factory(message_type, message)
-        except NotImplementedError as e:
+        except NotImplementedError:
             return
-        except DeprecationWarning as e:
+        except DeprecationWarning:
             return
 
     async def motion_stop_all(self):
