@@ -12,17 +12,20 @@ class Mode(IntEnum):
     THREE_D_FIX = 3
 
 
-class Watch(BaseModel):
+@dataclass
+class Watch:
     enable: bool = True
-    json_: bool = Field(True, alias="json")
+    json: bool = True
     split24: bool = False
+    nmea: bool = False
+    scaled: bool = False
+    pps: bool = False
+    timing: bool = False
     raw: int = 0
 
-    class Config:
-        extra = Extra.allow
 
-
-class Version(BaseModel):
+@dataclass
+class Version:
     release: str
     rev: str
     proto_major: int
@@ -33,7 +36,8 @@ class Version(BaseModel):
         return self.proto_major, self.proto_minor
 
 
-class Device(BaseModel):
+@dataclass
+class Device:
     path: str
     driver: str | None = None
     subtype: str | None = None
@@ -47,7 +51,8 @@ class Device(BaseModel):
     mincycle: float | None = None
 
 
-class Devices(BaseModel):
+@dataclass
+class Devices:
     devices: list[Device]
 
 
@@ -78,7 +83,8 @@ class TPV:
     leapseconds: int | None = None
 
 
-class PRN(BaseModel):
+@dataclass
+class PRN:
     PRN: int
     el: float | None = None
     az: float | None = None
@@ -88,7 +94,8 @@ class PRN(BaseModel):
     svid: int
 
 
-class Sky(BaseModel):
+@dataclass
+class Sky:
     device: str
     xdop: float | None = None
     ydop: float | None = None
@@ -102,21 +109,9 @@ class Sky(BaseModel):
     satellites: list[PRN] | None = None
 
 
-class Poll(BaseModel):
+@dataclass
+class Poll:
     time: datetime
     active: int
     tpv: list[TPV]
     sky: list[Sky]
-
-
-# class Response(BaseModel):
-#     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
-#         discriminator="class_"
-#     )
-
-
-# class Response(RootModel):
-#     __root__: Union[Poll, Sky, TPV, Devices, Version, Watch] = Field(
-#         discriminator="class_", alias="class"
-#     )
-Response = RootModel[Poll | Sky | TPV | Devices | Version | Watch]
