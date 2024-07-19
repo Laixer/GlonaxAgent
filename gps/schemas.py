@@ -39,6 +39,11 @@ class Version:
     def proto(self) -> tuple[int, int]:
         return self.proto_major, self.proto_minor
 
+    @staticmethod
+    def from_json(data: dict) -> "Version":
+        filtered_data = {k: v for k, v in data.items() if k in Version().__dict__}
+        return Version(**filtered_data)
+
 
 @dataclass
 class Device:
@@ -58,11 +63,21 @@ class Device:
     subtype: str | None = None
     subtype1: str | None = None
 
+    @staticmethod
+    def from_json(data: dict) -> "Device":
+        filtered_data = {k: v for k, v in data.items() if k in Device().__dict__}
+        return Device(**filtered_data)
+
 
 @dataclass
 class Devices:
     devices: list[Device]
     remote: str | None = None
+
+    @staticmethod
+    def from_json(data: dict) -> "Devices":
+        filtered_data = {k: v for k, v in data.items() if k in Devices().__dict__}
+        return Devices(**filtered_data)
 
 
 @dataclass
