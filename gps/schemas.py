@@ -85,6 +85,9 @@ class TPV:
     ecefx: float | None = None
     ecefy: float | None = None
     ecefz: float | None = None
+    ecefvx: float | None = None
+    ecefvy: float | None = None
+    ecefvz: float | None = None
 
 
 @dataclass
