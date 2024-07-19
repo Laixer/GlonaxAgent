@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
 
-from pydantic import BaseModel, RootModel, Extra, Field
-
 
 class Mode(IntEnum):
     UNKNOWN = 0
@@ -97,6 +95,9 @@ class PRN:
 @dataclass
 class Sky:
     device: str
+    nSat: int
+    uSat: int
+    time: datetime
     xdop: float | None = None
     ydop: float | None = None
     vdop: float | None = None
@@ -104,8 +105,6 @@ class Sky:
     hdop: float | None = None
     gdop: float | None = None
     pdop: float | None = None
-    nsat: int #= Field(alias="nSat")
-    usat: int # = Field(alias="uSat")
     satellites: list[PRN] | None = None
 
 

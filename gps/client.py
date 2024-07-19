@@ -2,7 +2,7 @@ import asyncio
 import json
 from dataclasses import asdict
 
-from gps.schemas import TPV, Device, Devices, Response, Sky, Version, Watch, Poll
+from gps.schemas import TPV, Device, Devices, Sky, Version, Watch, Poll
 
 POLL = "?POLL;\r\n"
 WATCH = "?WATCH={}\r\n"
