@@ -19,6 +19,7 @@ from glonax.exceptions import ProtocolError
 logger = logging.getLogger(__name__)
 
 
+# TODO: Inherit from IntEnum
 class MachineType(Enum):
     EXCAVATOR = 1
     WHEEL_LOADER = 2
@@ -42,6 +43,7 @@ class MachineType(Enum):
             return "forestry"
 
 
+# TODO: Inherit from IntEnum
 class MessageType(Enum):
     ERROR = 0x00
     ECHO = 0x01
@@ -201,15 +203,6 @@ class GlonaxStreamReader:
         return message_type, message
 
 
-# async def open_tcp_connection(
-#     address: str = "localhost", port: int = 30051
-# ) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
-#     reader, writer = await asyncio.open_connection(address, port)
-#     reader = GlonaxStreamReader(reader)
-#     writer = GlonaxStreamWriter(writer)
-#     return reader, writer
-
-
 async def open_unix_connection(
     path: str = "/tmp/glonax.sock",
 ) -> tuple[GlonaxStreamReader, GlonaxStreamWriter]:
@@ -241,9 +234,16 @@ class Session:
         writer: GlonaxStreamWriter,
         user_agent: str = DEFAULT_USER_AGENT,
     ):
+        # TODO: Make this internal
         self.reader = reader
+        # TODO: Make this internal
         self.writer = writer
-        self.user_agent = user_agent
+
+        self._user_agent = user_agent
+
+    @property
+    def user_agent(self):
+        return self._user_agent
 
     async def close(self):
         """
@@ -272,6 +272,18 @@ class Session:
         """
         await self.close()
 
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        """
+        Asynchronous iterator method that returns the next item from the iterator.
+
+        Returns:
+            The next item from the iterator.
+        """
+        return await self.recv()
+
     async def handshake(self):
         """
         Performs the handshake process with the Glonax server.
@@ -282,7 +294,7 @@ class Session:
         Raises:
             SomeException: If an error occurs during the handshake process.
         """
-        session = SessionFrame(self.user_agent)
+        session = SessionFrame(self._user_agent)
         await self.writer.write(MessageType.SESSION, session.to_bytes())
 
         # TODO: Ask the reader to block until INSTANCE response is received
@@ -291,9 +303,18 @@ class Session:
             self.instance = Instance.from_bytes(message)
             logger.debug(f"Instance ID: {self.instance}")
 
-    # TODO: See if we can reuse some of the methods from the `Session` class
-    async def recv_message(self) -> Message | None:
-        message_type, message = await self.reader.read()
+    @staticmethod
+    def __message_factory(message_type: MessageType, message: bytes) -> Message:
+        """
+        Creates a message object based on the message type and data.
+
+        Args:
+            message_type (MessageType): The type of the message.
+            message (bytes): The data of the message.
+
+        Returns:
+            Message: The message object.
+        """
         match message_type:
             case MessageType.INSTANCE:
                 instance = Instance.from_bytes(message)
@@ -331,6 +352,14 @@ class Session:
                     payload=motion,
                 )
                 return message
+            case _:
+                pass
+                # TODO: This should raise an error
+                # raise ValueError(f"Unknown message type: {message_type}")
+
+    async def recv(self) -> Message | None:
+        message_type, message = await self.reader.read()
+        return self.__message_factory(message_type, message)
 
     async def motion_stop_all(self):
         """
