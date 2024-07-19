@@ -75,6 +75,7 @@ class TPV:
     geoidSep: float | None = None
     eph: float | None = None
     sep: float | None = None
+    leapseconds: int | None = None
 
 
 class PRN(BaseModel):
