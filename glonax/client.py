@@ -352,14 +352,40 @@ class Session:
                     payload=motion,
                 )
                 return message
+            case MessageType.GNSS:
+                raise NotImplementedError("ROTATOR message type not implemented")
+            case MessageType.ROTATOR:
+                raise NotImplementedError("ROTATOR message type not implemented")
+            case MessageType.CONTROL:
+                raise NotImplementedError("ROTATOR message type not implemented")
+            case MessageType.TARGET:
+                raise NotImplementedError("TARGET message type not implemented")
+            case MessageType.ACTOR:
+                raise NotImplementedError("ACTOR message type not implemented")
+            case MessageType.REQUEST:
+                raise DeprecationWarning("REQUEST message type is deprecated")
+            case MessageType.SIGNAL:
+                raise DeprecationWarning("SIGNAL message type is deprecated")
+            case MessageType.SHUTDOWN:
+                raise DeprecationWarning("SHUTDOWN message type is deprecated")
+            case MessageType.ECHO:
+                raise DeprecationWarning("ECHO message type is deprecated")
+            case MessageType.ERROR:
+                raise DeprecationWarning("ERROR message type is deprecated")
+            case MessageType.SESSION:
+                raise RuntimeError("SESSION message type should not be received")
             case _:
-                pass
-                # TODO: This should raise an error
-                # raise ValueError(f"Unknown message type: {message_type}")
+                # TODO: Throw custom exception
+                raise ValueError(f"Unknown message type: {message_type}")
 
     async def recv(self) -> Message | None:
         message_type, message = await self.reader.read()
-        return self.__message_factory(message_type, message)
+        try:
+            return self.__message_factory(message_type, message)
+        except NotImplementedError as e:
+            return
+        except DeprecationWarning as e:
+            return
 
     async def motion_stop_all(self):
         """
