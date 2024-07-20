@@ -376,14 +376,16 @@ async def websocket():
 async def update_telemetry():
     global INSTANCE, instance_event
 
+    from host import HostService
+
     logger.debug("Waiting for instance event")
 
     await instance_event.wait()
 
     logger.info("Starting telemetry update task")
 
-    def seconds_elapsed() -> int:
-        return round(time.time() - psutil.boot_time())
+    # def seconds_elapsed() -> int:
+    #     return round(time.time() - psutil.boot_time())
 
     server_authkey = config["server"]["authkey"]
     headers = {"Authorization": "Bearer " + server_authkey}
@@ -396,13 +398,14 @@ async def update_telemetry():
             try:
                 await asyncio.sleep(15)
 
-                telemetry = Telemetry(
-                    memory_used=psutil.virtual_memory().percent,
-                    disk_used=psutil.disk_usage("/").percent,
-                    cpu_freq=psutil.cpu_freq().current,
-                    cpu_load=psutil.getloadavg(),
-                    uptime=seconds_elapsed(),
-                )
+                # telemetry = Telemetry(
+                #     memory_used=psutil.virtual_memory().percent,
+                #     disk_used=psutil.disk_usage("/").percent,
+                #     cpu_freq=psutil.cpu_freq().current,
+                #     cpu_load=psutil.getloadavg(),
+                #     uptime=seconds_elapsed(),
+                # )
+                telemetry = HostService.get_telemetry()
                 data = telemetry.model_dump()
 
                 response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
