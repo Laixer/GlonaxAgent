@@ -1,14 +1,15 @@
+import time
 from dataclasses import dataclass
 
 
 @dataclass
 class Location:
-    fix: bool
-    latitude: float
-    longitude: float
-    speed: float
-    altitude: float
-    heading: float
+    fix: bool = False
+    latitude: float | None = None
+    longitude: float | None = None
+    speed: float | None = None
+    altitude: float | None = None
+    heading: float | None = None
 
 
 class LocationService:
@@ -19,8 +20,14 @@ class LocationService:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def set_location(self, location: Location):
+    def feed(self, location: Location):
         self.location = location
+        self.timestamp = time.time()
 
-    def get_location(self):
+    def last_location(self) -> Location:
         return self.location
+
+    def has_fix(self) -> bool:
+        if self.location is None:
+            return False
+        return self.location.fix
