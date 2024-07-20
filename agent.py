@@ -266,7 +266,7 @@ dispatcher = jsonrpc.Dispatcher()
 
 
 @dispatcher.rpc_call
-async def rpc_setup_rtc(sdp: str):
+async def rpc_setup_rtc(sdp: str) -> str:
     path = config["glonax"]["unix_socket"]
 
     logger.info("Setting up RTC connection")
@@ -319,8 +319,8 @@ def echo(input):
 
 
 @dispatcher.rpc_call
-def glonax_instance():
-    return INSTANCE.model
+def glonax_instance() -> gclient.Instance:
+    return INSTANCE
 
 
 async def websocket():
