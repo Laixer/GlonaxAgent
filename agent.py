@@ -7,6 +7,7 @@ import logging
 import random
 import configparser
 import argparse
+import traceback
 import httpx
 import psutil
 import asyncio
@@ -151,6 +152,8 @@ async def glonax_server():
     except ConnectionError as e:
         logger.debug(f"Glonax connection error: {e}")
         logger.error("Glonax is not running")
+    except Exception as e:
+        logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
 peers = set()
@@ -375,6 +378,8 @@ async def websocket():
             logger.error("Websocket connection reset")
         except ConnectionRefusedError:
             logger.error("Websocket connection refused")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
 
         logger.info("Reconnecting websocket...")
         await asyncio.sleep(1)
