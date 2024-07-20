@@ -5,7 +5,7 @@ from models import Telemetry
 
 class HostService:
     @staticmethod
-    def uptime(self) -> int:
+    def uptime() -> int:
         return round(time.time() - psutil.boot_time())
 
     @staticmethod

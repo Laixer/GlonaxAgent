@@ -384,9 +384,6 @@ async def update_telemetry():
 
     logger.info("Starting telemetry update task")
 
-    # def seconds_elapsed() -> int:
-    #     return round(time.time() - psutil.boot_time())
-
     server_authkey = config["server"]["authkey"]
     headers = {"Authorization": "Bearer " + server_authkey}
 
@@ -398,13 +395,6 @@ async def update_telemetry():
             try:
                 await asyncio.sleep(15)
 
-                # telemetry = Telemetry(
-                #     memory_used=psutil.virtual_memory().percent,
-                #     disk_used=psutil.disk_usage("/").percent,
-                #     cpu_freq=psutil.cpu_freq().current,
-                #     cpu_load=psutil.getloadavg(),
-                #     uptime=seconds_elapsed(),
-                # )
                 telemetry = HostService.get_telemetry()
                 data = telemetry.model_dump()
 
