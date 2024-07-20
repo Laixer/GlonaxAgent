@@ -23,7 +23,7 @@ from glonax.message import (
     RTCSessionDescription,
 )
 from models import HostConfig, Telemetry
-from process import System
+from system import System
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
@@ -112,8 +112,10 @@ async def remote_address():
             logger.error(f"Unknown error: {e}")
 
 
-async def glonax():
+async def glonax_server():
     global INSTANCE, instance_event
+
+    from machine import MachineService
 
     logger.info("Starting glonax task")
 
@@ -138,6 +140,10 @@ async def glonax():
 
             with open("instance.dat", "wb") as f:
                 pickle.dump(session.instance, f)
+
+            async for message in session:
+                # MachineService().feed(message)
+                pass
 
     except asyncio.CancelledError:
         logger.info("Glonax task cancelled")
@@ -262,6 +268,7 @@ class RTCGlonaxPeerConnection:
         peers.remove(self)
 
 
+# TODO: Add roles to the RPC calls
 dispatcher = jsonrpc.Dispatcher()
 
 
@@ -433,18 +440,15 @@ async def update_telemetry():
 
 
 # TODO: This is experimental
-async def gps():
+async def gps_server():
     from gps import client
     from gps.schemas import TPV
 
     from location import Location, LocationService
 
-    HOST = "127.0.0.1"
-    PORT = 2947
-
     while True:
         try:
-            async with await client.open(HOST, PORT) as c:
+            async with await client.open() as c:
                 i = 0
                 async for result in c:
                     if isinstance(result, TPV):
@@ -496,8 +500,8 @@ async def main():
         await remote_address()
 
         async with asyncio.TaskGroup() as tg:
-            task1 = tg.create_task(glonax())
-            task2 = tg.create_task(gps())
+            task1 = tg.create_task(glonax_server())
+            task2 = tg.create_task(gps_server())
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
     except asyncio.CancelledError:
