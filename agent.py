@@ -318,8 +318,9 @@ def echo(input):
     return input
 
 
-# TODO: Add glonax version RPC call
-# TODO: Add glomax instance RPC call
+@dispatcher.rpc_call
+def glonax_instance():
+    return INSTANCE.model
 
 
 async def websocket():
