@@ -444,6 +444,8 @@ async def gps():
     from gps import client
     from gps.schemas import TPV
 
+    from location import Location, LocationService
+
     HOST = "127.0.0.1"
     PORT = 2947
 
@@ -453,6 +455,16 @@ async def gps():
                 i = 0
                 async for result in c:
                     if isinstance(result, TPV):
+                        l = Location(
+                            fix=result.mode > 1,
+                            latitude=result.lat,
+                            longitude=result.lon,
+                            speed=result.speed,
+                            altitude=result.alt,
+                            heading=result.track,
+                        )
+                        LocationService().feed(l)
+
                         if i % 30 == 0:
                             logger.info(
                                 f"GPS: Mode:{str(result.mode)} LatLong({result.lat}, {result.lon}) Altitude: {result.alt} Speed: {result.speed} Climb: {result.climb}"
@@ -462,6 +474,7 @@ async def gps():
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
             return
+        # TODO: Move this to the client
         except asyncio.IncompleteReadError as e:
             logger.error("GPS disconnected")
             await asyncio.sleep(1)
