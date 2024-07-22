@@ -2,7 +2,6 @@
 
 import os
 import pickle
-import time
 import logging
 import random
 import configparser
@@ -16,6 +15,7 @@ from systemd import journal
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
+from log import ColorLogHandler
 from glonax import client as gclient
 from models import HostConfig
 from system import System
@@ -26,23 +26,6 @@ import jsonrpc
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
-
-
-class ColorFormatter(logging.Formatter):
-    COLORS = {
-        logging.DEBUG: "\033[38;21m",
-        logging.INFO: "\033[32m",
-        logging.WARNING: "\033[33;1m",
-        logging.ERROR: "\033[31;1m",
-        logging.CRITICAL: "\033[31;1m",
-    }
-    RESET = "\033[0m"
-
-    def format(self, record: logging.LogRecord):
-        log_color = self.COLORS.get(record.levelno, self.RESET)
-        log_fmt = f"%(asctime)s | {log_color}%(levelname)8s{self.RESET} | %(message)s"
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
 
 
 INSTANCE: gclient.Instance | None = None
@@ -310,6 +293,7 @@ async def websocket():
 
     logger.info("Starting websocket task")
 
+    # TODO: Build url from config
     base_url = (
         config["server"]["base_url"]
         .replace("http://", "ws://")
@@ -474,7 +458,6 @@ async def http_task_group(tg: asyncio.TaskGroup):
         tg.create_task(update_gnss(client))
 
 
-# TODO: This is experimental
 async def gps_server():
     from gps import client
     from gps.schemas import TPV
@@ -511,6 +494,8 @@ async def gps_server():
 async def main():
     global INSTANCE, instance_event
 
+    logger.info("Starting agent")
+
     try:
         if os.path.exists("instance.dat"):
             with open("instance.dat", "rb") as f:
@@ -530,7 +515,7 @@ async def main():
             task1 = tg.create_task(glonax_server())
             task2 = tg.create_task(gps_server())
             task3 = tg.create_task(websocket())
-            task7 = tg.create_task(http_task_group(tg))
+            task4 = tg.create_task(http_task_group(tg))
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 
@@ -563,9 +548,7 @@ if __name__ == "__main__":
     if args.log_systemd:
         logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
     else:
-        handler = logging.StreamHandler()
-        handler.setFormatter(ColorFormatter())
-        logger.addHandler(handler)
+        logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
 
