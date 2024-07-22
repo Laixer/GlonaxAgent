@@ -19,13 +19,12 @@ from aiortc.contrib.media import MediaPlayer, MediaRelay
 from glonax import client as gclient
 from glonax.message import (
     Message,
-    ChannelMessageType,
     ModuleStatus,
     RTCSessionDescription,
 )
-from models import HostConfig, Telemetry
+from models import HostConfig
 from system import System
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 import jsonrpc
@@ -51,39 +50,39 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-class MessageChangeDetector:
-    def __init__(self):
-        self.last_message: Message | None = None
-        self.last_message_update = time.time()
+# class MessageChangeDetector:
+#     def __init__(self):
+#         self.last_message: Message | None = None
+#         self.last_message_update = time.time()
 
-    def process_message(self, message: Message) -> bool:
-        has_changed = message != self.last_message or (
-            (time.time() - self.last_message_update) > 5
-        )
-        if has_changed:
-            self.last_message = message
-            self.last_message_update = time.time()
-        return has_changed
+#     def process_message(self, message: Message) -> bool:
+#         has_changed = message != self.last_message or (
+#             (time.time() - self.last_message_update) > 5
+#         )
+#         if has_changed:
+#             self.last_message = message
+#             self.last_message_update = time.time()
+#         return has_changed
 
-    def get_last_message(self) -> Message | None:
-        return self.last_message
+#     def get_last_message(self) -> Message | None:
+#         return self.last_message
 
 
-class StatusChangeDetector:
-    def __init__(self):
-        self.last_status: dict[str, ModuleStatus] = {}
-        self.last_status_update: dict[str, int] = {}
+# class StatusChangeDetector:
+#     def __init__(self):
+#         self.last_status: dict[str, ModuleStatus] = {}
+#         self.last_status_update: dict[str, int] = {}
 
-    def process_status(self, status: ModuleStatus) -> bool:
-        last_update = self.last_status_update.get(status.name, 0)
-        has_changed = (
-            status != self.last_status.get(status.name)
-            or (time.time() - last_update) > 5
-        )
-        if has_changed:
-            self.last_status[status.name] = status
-            self.last_status_update[status.name] = time.time()
-        return has_changed
+#     def process_status(self, status: ModuleStatus) -> bool:
+#         last_update = self.last_status_update.get(status.name, 0)
+#         has_changed = (
+#             status != self.last_status.get(status.name)
+#             or (time.time() - last_update) > 5
+#         )
+#         if has_changed:
+#             self.last_status[status.name] = status
+#             self.last_status_update[status.name] = time.time()
+#         return has_changed
 
 
 INSTANCE: gclient.Instance | None = None
@@ -142,9 +141,9 @@ async def glonax_server():
             with open("instance.dat", "wb") as f:
                 pickle.dump(session.instance, f)
 
+            machine_service = MachineService()
             async for message in session:
-                # MachineService().feed(message)
-                pass
+                machine_service.feed(message)
 
     except asyncio.CancelledError:
         logger.info("Glonax task cancelled")
@@ -276,7 +275,7 @@ dispatcher = jsonrpc.Dispatcher()
 
 
 @dispatcher.rpc_call
-async def rpc_setup_rtc(sdp: str) -> str:
+async def setup_rtc(sdp: str) -> str:
     path = config["glonax"]["unix_socket"]
 
     logger.info("Setting up RTC connection")
@@ -291,6 +290,12 @@ async def rpc_setup_rtc(sdp: str) -> str:
     answer = await peer.set_session_description(offer)
 
     return answer.sdp
+
+
+@dispatcher.rpc_call
+async def update_rtc(candidate: RTCIceCandidate) -> str:
+    logger.info("Updating RTC connection with ICE candidate")
+    logger.debug(f"ICE candidate: {candidate}")
 
 
 @dispatcher.rpc_call
@@ -341,10 +346,6 @@ async def websocket():
     await instance_event.wait()
 
     logger.info("Starting websocket task")
-
-    # engine_detector = MessageChangeDetector()
-    # motion_detector = MessageChangeDetector()
-    # status_detector = StatusChangeDetector()
 
     base_url = (
         config["server"]["base_url"]
@@ -454,7 +455,8 @@ async def gps_server():
     while True:
         try:
             async with await client.open() as c:
-                i = 0
+                # i = 0
+                location_service = LocationService()
                 async for result in c:
                     if isinstance(result, TPV):
                         l = Location(
@@ -465,13 +467,13 @@ async def gps_server():
                             altitude=result.alt,
                             heading=result.track,
                         )
-                        LocationService().feed(l)
+                        location_service.feed(l)
 
-                        if i % 30 == 0:
-                            logger.info(
-                                f"GPS: Mode:{str(result.mode)} LatLong({result.lat}, {result.lon}) Altitude: {result.alt} Speed: {result.speed} Climb: {result.climb}"
-                            )
-                        i = i + 1
+                        # if i % 30 == 0:
+                        #     logger.info(
+                        #         f"GPS: Mode:{str(result.mode)} LatLong({result.lat}, {result.lon}) Altitude: {result.alt} Speed: {result.speed} Climb: {result.climb}"
+                        #     )
+                        # i = i + 1
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
