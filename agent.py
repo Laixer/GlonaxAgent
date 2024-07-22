@@ -349,102 +349,112 @@ async def websocket():
         await asyncio.sleep(1)
 
 
-async def update_telemetry():
-    global INSTANCE, instance_event
+async def update_telemetry(client: httpx.AsyncClient):
+    global INSTANCE
 
     from host import HostService
 
-    logger.debug("Waiting for instance event")
-
-    await instance_event.wait()
-
     logger.info("Starting telemetry update task")
 
-    server_authkey = config["server"]["authkey"]
-    headers = {"Authorization": "Bearer " + server_authkey}
+    while True:
+        try:
+            await asyncio.sleep(15)
 
-    base_url = config["server"]["base_url"]
-    async with httpx.AsyncClient(
-        http2=True, base_url=base_url, headers=headers
-    ) as client:
-        while True:
-            try:
-                await asyncio.sleep(15)
+            telemetry = HostService.get_telemetry()
+            data = telemetry.model_dump()
 
-                telemetry = HostService.get_telemetry()
-                data = telemetry.model_dump()
+            response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
+            response.raise_for_status()
 
-                response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
-                response.raise_for_status()
+            await asyncio.sleep(45)
 
-                await asyncio.sleep(45)
-
-            except asyncio.CancelledError:
-                break
-            except (
-                httpx.HTTPStatusError,
-                httpx.ConnectTimeout,
-                httpx.ConnectError,
-            ) as e:
-                logger.error(f"HTTP Error: {e}")
-            except Exception as e:
-                logger.critical(f"Unknown error: {traceback.format_exc()}")
+        except asyncio.CancelledError:
+            break
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
-async def update_host():
-    global INSTANCE, instance_event
-
-    logger.debug("Waiting for instance event")
-
-    await instance_event.wait()
+async def update_host(client: httpx.AsyncClient):
+    global INSTANCE
 
     logger.info("Starting host update task")
 
-    server_authkey = config["server"]["authkey"]
-    headers = {"Authorization": "Bearer " + server_authkey}
+    while True:
+        try:
+            await asyncio.sleep(15)
 
-    base_url = config["server"]["base_url"]
-    async with httpx.AsyncClient(
-        http2=True, base_url=base_url, headers=headers
-    ) as client:
-        while True:
-            try:
-                await asyncio.sleep(15)
+            # TODO: Retrieve from HostService
+            host_config = HostConfig(
+                hostname=os.uname().nodename,
+                kernel=os.uname().release,
+                memory_total=psutil.virtual_memory().total,
+                cpu_count=psutil.cpu_count(),
+                model=INSTANCE.model,
+                version=INSTANCE.version_string,
+                serial_number=INSTANCE.serial_number,
+            )
+            data = host_config.model_dump()
 
-                # TODO: Retrieve from HostService
-                host_config = HostConfig(
-                    hostname=os.uname().nodename,
-                    kernel=os.uname().release,
-                    memory_total=psutil.virtual_memory().total,
-                    cpu_count=psutil.cpu_count(),
-                    model=INSTANCE.model,
-                    version=INSTANCE.version_string,
-                    serial_number=INSTANCE.serial_number,
-                )
-                data = host_config.model_dump()
+            if random.randint(1, 25) == 1:
+                response = await client.put(f"/{INSTANCE.id}/host", json=data)
+                response.raise_for_status()
 
-                if random.randint(1, 25) == 1:
-                    response = await client.put(f"/{INSTANCE.id}/host", json=data)
-                    response.raise_for_status()
+            await asyncio.sleep(45)
 
-                await asyncio.sleep(45)
-
-            except asyncio.CancelledError:
-                break
-            except (
-                httpx.HTTPStatusError,
-                httpx.ConnectTimeout,
-                httpx.ConnectError,
-            ) as e:
-                logger.error(f"HTTP Error: {e}")
-            except Exception as e:
-                logger.critical(f"Unknown error: {traceback.format_exc()}")
+        except asyncio.CancelledError:
+            break
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
-async def update_gnss():
-    global INSTANCE, instance_event
-
+async def update_gnss(client: httpx.AsyncClient):
     from location import LocationService
+
+    logger.info("Starting GNSS update task")
+
+    location_service = LocationService()
+
+    while True:
+        try:
+            await asyncio.sleep(20)
+
+            location = location_service.last_location()
+            if location is not None:
+                logger.info(
+                    f"Location: {location.latitude}, {location.longitude}, {location.altitude}, {location.speed}, {location.heading}"
+                )
+
+            # response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
+            # response.raise_for_status()
+
+            await asyncio.sleep(40)
+
+        except asyncio.CancelledError:
+            break
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+
+async def http_task_group(tg: asyncio.TaskGroup):
+    global INSTANCE, instance_event
 
     logger.debug("Waiting for instance event")
 
@@ -452,8 +462,6 @@ async def update_gnss():
 
     logger.info("Starting GNSS update task")
 
-    location_service = LocationService()
-
     server_authkey = config["server"]["authkey"]
     headers = {"Authorization": "Bearer " + server_authkey}
 
@@ -461,31 +469,9 @@ async def update_gnss():
     async with httpx.AsyncClient(
         http2=True, base_url=base_url, headers=headers
     ) as client:
-        while True:
-            try:
-                await asyncio.sleep(20)
-
-                location = location_service.last_location()
-                if location is not None:
-                    logger.info(
-                        f"Location: {location.latitude}, {location.longitude}, {location.altitude}, {location.speed}, {location.heading}"
-                    )
-
-                # response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
-                # response.raise_for_status()
-
-                await asyncio.sleep(40)
-
-            except asyncio.CancelledError:
-                break
-            except (
-                httpx.HTTPStatusError,
-                httpx.ConnectTimeout,
-                httpx.ConnectError,
-            ) as e:
-                logger.error(f"HTTP Error: {e}")
-            except Exception as e:
-                logger.critical(f"Unknown error: {traceback.format_exc()}")
+        tg.create_task(update_telemetry(client))
+        tg.create_task(update_host(client))
+        tg.create_task(update_gnss(client))
 
 
 # TODO: This is experimental
@@ -544,9 +530,7 @@ async def main():
             task1 = tg.create_task(glonax_server())
             task2 = tg.create_task(gps_server())
             task3 = tg.create_task(websocket())
-            task4 = tg.create_task(update_telemetry())
-            task5 = tg.create_task(update_host())
-            task6 = tg.create_task(update_gnss())
+            task7 = tg.create_task(http_task_group(tg))
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 
