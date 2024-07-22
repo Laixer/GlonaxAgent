@@ -17,11 +17,6 @@ from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from glonax import client as gclient
-from glonax.message import (
-    Message,
-    ModuleStatus,
-    RTCSessionDescription,
-)
 from models import HostConfig
 from system import System
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
@@ -48,41 +43,6 @@ class ColorFormatter(logging.Formatter):
         log_fmt = f"%(asctime)s | {log_color}%(levelname)8s{self.RESET} | %(message)s"
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
-
-
-# class MessageChangeDetector:
-#     def __init__(self):
-#         self.last_message: Message | None = None
-#         self.last_message_update = time.time()
-
-#     def process_message(self, message: Message) -> bool:
-#         has_changed = message != self.last_message or (
-#             (time.time() - self.last_message_update) > 5
-#         )
-#         if has_changed:
-#             self.last_message = message
-#             self.last_message_update = time.time()
-#         return has_changed
-
-#     def get_last_message(self) -> Message | None:
-#         return self.last_message
-
-
-# class StatusChangeDetector:
-#     def __init__(self):
-#         self.last_status: dict[str, ModuleStatus] = {}
-#         self.last_status_update: dict[str, int] = {}
-
-#     def process_status(self, status: ModuleStatus) -> bool:
-#         last_update = self.last_status_update.get(status.name, 0)
-#         has_changed = (
-#             status != self.last_status.get(status.name)
-#             or (time.time() - last_update) > 5
-#         )
-#         if has_changed:
-#             self.last_status[status.name] = status
-#             self.last_status_update[status.name] = time.time()
-#         return has_changed
 
 
 INSTANCE: gclient.Instance | None = None
@@ -178,6 +138,7 @@ class RTCGlonaxPeerConnection:
         self.__glonax_session = None
         self.__task = None
 
+        # TOOD: Throws av.error.OSError: [Errno 16] Device or resource busy: '/dev/video0'
         self.__webcam = MediaPlayer(
             self.__video_track, format="v4l2", options=self.__av_options
         )
@@ -230,6 +191,7 @@ class RTCGlonaxPeerConnection:
     async def set_session_description(
         self, offer: RTCSessionDescription
     ) -> RTCSessionDescription:
+        # TODO: Throws AttributeError: 'dict' object has no attribute 'splitlines'
         await self.__peer_connection.setRemoteDescription(offer)
         answer = await self.__peer_connection.createAnswer()
         await self.__peer_connection.setLocalDescription(answer)
@@ -274,6 +236,7 @@ class RTCGlonaxPeerConnection:
 dispatcher = jsonrpc.Dispatcher()
 
 
+# TODO: Accept and return 'RTCSessionDescription' as a parameter
 @dispatcher.rpc_call
 async def setup_rtc(sdp: str) -> str:
     path = config["glonax"]["unix_socket"]
@@ -414,8 +377,41 @@ async def update_telemetry():
                 response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
                 response.raise_for_status()
 
-                await asyncio.sleep(30)
+                await asyncio.sleep(45)
 
+            except asyncio.CancelledError:
+                break
+            except (
+                httpx.HTTPStatusError,
+                httpx.ConnectTimeout,
+                httpx.ConnectError,
+            ) as e:
+                logger.error(f"HTTP Error: {e}")
+            except Exception as e:
+                logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+
+async def update_host():
+    global INSTANCE, instance_event
+
+    logger.debug("Waiting for instance event")
+
+    await instance_event.wait()
+
+    logger.info("Starting host update task")
+
+    server_authkey = config["server"]["authkey"]
+    headers = {"Authorization": "Bearer " + server_authkey}
+
+    base_url = config["server"]["base_url"]
+    async with httpx.AsyncClient(
+        http2=True, base_url=base_url, headers=headers
+    ) as client:
+        while True:
+            try:
+                await asyncio.sleep(15)
+
+                # TODO: Retrieve from HostService
                 host_config = HostConfig(
                     hostname=os.uname().nodename,
                     kernel=os.uname().release,
@@ -431,7 +427,7 @@ async def update_telemetry():
                     response = await client.put(f"/{INSTANCE.id}/host", json=data)
                     response.raise_for_status()
 
-                await asyncio.sleep(15)
+                await asyncio.sleep(45)
 
             except asyncio.CancelledError:
                 break
@@ -442,7 +438,54 @@ async def update_telemetry():
             ) as e:
                 logger.error(f"HTTP Error: {e}")
             except Exception as e:
-                logger.error(f"Unknown error: {e}")
+                logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+
+async def update_gnss():
+    global INSTANCE, instance_event
+
+    from location import LocationService
+
+    logger.debug("Waiting for instance event")
+
+    await instance_event.wait()
+
+    logger.info("Starting GNSS update task")
+
+    location_service = LocationService()
+
+    server_authkey = config["server"]["authkey"]
+    headers = {"Authorization": "Bearer " + server_authkey}
+
+    base_url = config["server"]["base_url"]
+    async with httpx.AsyncClient(
+        http2=True, base_url=base_url, headers=headers
+    ) as client:
+        while True:
+            try:
+                await asyncio.sleep(20)
+
+                location = location_service.last_location()
+                if location is not None:
+                    logger.info(
+                        f"Location: {location.latitude}, {location.longitude}, {location.altitude}, {location.speed}, {location.heading}"
+                    )
+
+                # response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
+                # response.raise_for_status()
+
+                await asyncio.sleep(40)
+
+            except asyncio.CancelledError:
+                break
+            except (
+                httpx.HTTPStatusError,
+                httpx.ConnectTimeout,
+                httpx.ConnectError,
+            ) as e:
+                logger.error(f"HTTP Error: {e}")
+            except Exception as e:
+                logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
 # TODO: This is experimental
@@ -455,7 +498,6 @@ async def gps_server():
     while True:
         try:
             async with await client.open() as c:
-                # i = 0
                 location_service = LocationService()
                 async for result in c:
                     if isinstance(result, TPV):
@@ -469,12 +511,6 @@ async def gps_server():
                         )
                         location_service.feed(l)
 
-                        # if i % 30 == 0:
-                        #     logger.info(
-                        #         f"GPS: Mode:{str(result.mode)} LatLong({result.lat}, {result.lon}) Altitude: {result.alt} Speed: {result.speed} Climb: {result.climb}"
-                        #     )
-                        # i = i + 1
-
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
             return
@@ -486,6 +522,8 @@ async def gps_server():
             logger.debug(f"GPS connection error: {e}")
             logger.error("GPS is not running")
             await asyncio.sleep(1)
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
 async def main():
@@ -511,6 +549,8 @@ async def main():
             task2 = tg.create_task(gps_server())
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(update_telemetry())
+            task5 = tg.create_task(update_host())
+            task6 = tg.create_task(update_gnss())
     except asyncio.CancelledError:
         logger.info("Agent is gracefully shutting down")
 

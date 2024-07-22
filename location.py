@@ -20,11 +20,15 @@ class LocationService:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    def __init__(self):
+        if not hasattr(self, "location"):
+            self.location = None
+
     def feed(self, location: Location):
         self.location = location
         self.timestamp = time.time()
 
-    def last_location(self) -> Location:
+    def last_location(self) -> Location | None:
         return self.location
 
     def has_fix(self) -> bool:
