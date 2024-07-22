@@ -514,10 +514,6 @@ async def gps_server():
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
             return
-        # TODO: Move this to the client
-        except asyncio.IncompleteReadError as e:
-            logger.error("GPS disconnected")
-            await asyncio.sleep(1)
         except ConnectionError as e:
             logger.debug(f"GPS connection error: {e}")
             logger.error("GPS is not running")

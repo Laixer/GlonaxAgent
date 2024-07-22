@@ -11,7 +11,7 @@ WATCH = "?WATCH={}\r\n"
 logger = logging.getLogger(__name__)
 
 
-class GpsdClient:
+class Client:
     def __init__(
         self,
         reader: asyncio.StreamReader,
@@ -28,8 +28,11 @@ class GpsdClient:
         self.watch_config = watch_config
 
     async def __read(self) -> dict:
-        data = await self.__reader.readline()
-        return json.loads(data)
+        try:
+            data = await self.__reader.readline()
+            return json.loads(data)
+        except asyncio.IncompleteReadError:
+            raise ConnectionError("Connection closed by server")
 
     async def close(self):
         await self.__writer.drain()
@@ -103,8 +106,8 @@ class GpsdClient:
         return await self.recv()
 
 
-async def open(host: str = "127.0.0.1", port: int = 2947) -> GpsdClient:
+async def open(host: str = "127.0.0.1", port: int = 2947) -> Client:
     reader, writer = await asyncio.open_connection(host, port)
-    client = GpsdClient(reader, writer)
+    client = Client(reader, writer)
     await client.watch()
     return client
