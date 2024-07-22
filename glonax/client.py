@@ -324,41 +324,13 @@ class Session:
         """
         match message_type:
             case MessageType.INSTANCE:
-                instance = Instance.from_bytes(message)
-
-                message = Message(
-                    type=ChannelMessageType.SIGNAL,
-                    topic="instance",
-                    payload=instance,
-                )
-                return message
+                return Instance.from_bytes(message)
             case MessageType.STATUS:
-                status = ModuleStatus.from_bytes(message)
-
-                message = Message(
-                    type=ChannelMessageType.SIGNAL,
-                    topic="status",
-                    payload=status,
-                )
-                return message
+                return ModuleStatus.from_bytes(message)
             case MessageType.ENGINE:
-                engine = Engine.from_bytes(message)
-
-                message = Message(
-                    type=ChannelMessageType.SIGNAL,
-                    topic="engine",
-                    payload=engine,
-                )
-                return message
+                return Engine.from_bytes(message)
             case MessageType.MOTION:
-                motion = Motion.from_bytes(message)
-
-                message = Message(
-                    type=ChannelMessageType.SIGNAL,
-                    topic="motion",
-                    payload=motion,
-                )
-                return message
+                return Motion.from_bytes(message)
             case MessageType.GNSS:
                 raise NotImplementedError("ROTATOR message type not implemented")
             case MessageType.ROTATOR:
