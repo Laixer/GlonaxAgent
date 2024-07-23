@@ -1,7 +1,8 @@
 import struct
 import logging
 import asyncio
-from enum import Enum
+from enum import IntEnum
+from dataclasses import dataclass
 
 from glonax import DEFAULT_USER_AGENT
 from glonax.message import (
@@ -17,8 +18,7 @@ from glonax.exceptions import ProtocolError
 logger = logging.getLogger(__name__)
 
 
-# TODO: Inherit from IntEnum
-class MachineType(Enum):
+class MachineType(IntEnum):
     EXCAVATOR = 1
     WHEEL_LOADER = 2
     DOZER = 3
@@ -41,8 +41,7 @@ class MachineType(Enum):
             return "forestry"
 
 
-# TODO: Inherit from IntEnum
-class MessageType(Enum):
+class MessageType(IntEnum):
     ERROR = 0x00
     ECHO = 0x01
     SESSION = 0x10
@@ -53,7 +52,7 @@ class MessageType(Enum):
     MOTION = 0x20
     SIGNAL = 0x31
     ACTOR = 0x40
-    VMS = 0x41  # TODO: Remove this message type
+    VMS = 0x41
     GNSS = 0x42
     ENGINE = 0x43
     TARGET = 0x44
@@ -61,9 +60,41 @@ class MessageType(Enum):
     ROTATOR = 0x46
 
 
+@dataclass
+class Frame:
+    type: MessageType
+    message_length: int
+
+    def to_bytes(self) -> bytes:
+        header = b"LXR"
+        header += b"\x03"
+        header += struct.pack("B", self.type.value)
+        header += struct.pack(">H", self.message_length)
+        header += b"\x00\x00\x00"
+
+        return header
+
+    def from_bytes(data: bytes) -> "Frame":
+        if len(data) != 10:
+            raise ProtocolError("Invalid frame received")
+
+        header = data[:10]
+        if header[:3] != b"LXR":
+            raise ProtocolError("Invalid header received")
+        if header[3:4] != b"\x03":
+            raise ProtocolError("Invalid protocol version")
+
+        message_type = MessageType(struct.unpack("B", header[4:5])[0])
+        message_length = struct.unpack(">H", header[5:7])[0]
+        if header[7:10] != b"\x00\x00\x00":
+            raise ProtocolError("Invalid header padding")
+
+        return Frame(message_type, message_length)
+
+
+@dataclass
 class SessionFrame:
-    def __init__(self, name):
-        self.name = name
+    name: str
 
     def to_bytes(self):
         data = struct.pack("B", 3)
@@ -94,7 +125,6 @@ class GlonaxStreamWriter:
         self.writer.write(data)
         await self.writer.drain()
 
-    # TODO: Maybe move the actual encoding to the `Frame` class
     async def write(self, type: MessageType, data: bytes):
         """
         Writes a message to the stream.
@@ -103,11 +133,9 @@ class GlonaxStreamWriter:
             type (MessageType): The type of the message.
             data (bytes): The data of the message.
         """
-        header = b"LXR\x03"
-        header += struct.pack("B", type.value)
-        header += struct.pack(">H", len(data))
-        header += b"\x00\x00\x00"
-        self.writer.write(header + data)
+        frame = Frame(type, len(data))
+        self.writer.write(frame.to_bytes())
+        self.writer.write(data)
         await self.writer.drain()
 
     async def motion(self, motion: Motion):
@@ -168,7 +196,7 @@ class GlonaxStreamReader:
             if header[3:4] != b"\x03":
                 raise ProtocolError("Invalid protocol version")
 
-            # message_type = MessageType(struct.unpack("B", header[4:5])[0])
+            message_type = MessageType(struct.unpack("B", header[4:5])[0])
             message_length = struct.unpack(">H", header[5:7])[0]
             if header[7:10] != b"\x00\x00\x00":
                 raise ProtocolError("Invalid header padding")
@@ -190,20 +218,11 @@ class GlonaxStreamReader:
 
         try:
             header = await self.reader.readexactly(10)
-            if header[:3] != b"LXR":
-                raise ProtocolError("Invalid header received")
-            if header[3:4] != b"\x03":
-                raise ProtocolError("Invalid protocol version")
+            frame = Frame.from_bytes(header)
 
-            message_type = MessageType(struct.unpack("B", header[4:5])[0])
-            message_length = struct.unpack(">H", header[5:7])[0]
-            if header[7:10] != b"\x00\x00\x00":
-                raise ProtocolError("Invalid header padding")
-            message = await self.reader.readexactly(message_length)
-            if len(message) != message_length:
-                raise ProtocolError("Invalid message length")
+            message = await self.reader.readexactly(frame.message_length)
+            return frame.type, message
 
-            return message_type, message
         except asyncio.IncompleteReadError:
             raise ConnectionError("Connection closed by server")
 
