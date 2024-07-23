@@ -457,6 +457,13 @@ async def http_task_group(tg: asyncio.TaskGroup):
         tg.create_task(update_host(client))
         tg.create_task(update_gnss(client))
 
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            logger.info("HTTP task group cancelled")
+            return
+
 
 async def gps_server():
     from gps import client
