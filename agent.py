@@ -101,9 +101,15 @@ async def glonax_server():
 peers = set()
 
 
+class PeerConnectionParams:
+    video_track: int = 0
+    video_size: str = "1280x720"
+
+
 class RTCGlonaxPeerConnection:
     global peers
 
+    # TODO: pass PeerConnectionParams as a parameter
     def __init__(self, socket_path: str, user_agent: str = "glonax-rtc/1.0"):
         self.__socket_path = socket_path
         self.__user_agent = user_agent
@@ -172,6 +178,7 @@ class RTCGlonaxPeerConnection:
     def video_track(self) -> str:
         return self.__video_track
 
+    # TODO: pass RTCSessionDescription
     async def set_session_description(
         self, offer: RTCSessionDescription
     ) -> RTCSessionDescription:
@@ -232,9 +239,9 @@ async def setup_rtc(sdp: str) -> str:
         logger.error("RTC connection already established")
         return None
 
-    peer = RTCGlonaxPeerConnection(path)
+    peer_connection = RTCGlonaxPeerConnection(path)
     offer = RTCSessionDescription(type="offer", sdp=sdp)
-    answer = await peer.set_session_description(offer)
+    answer = await peer_connection.set_session_description(offer)
 
     return answer.sdp
 
