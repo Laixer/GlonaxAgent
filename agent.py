@@ -127,7 +127,7 @@ class RTCGlonaxPeerConnection:
         )
 
         relay = MediaRelay()
-        video = relay.subscribe(self.__webcam.video)
+        video = relay.subscribe(self.__webcam.video, buffered=False)
 
         self.__peer_connection.addTrack(video)
 

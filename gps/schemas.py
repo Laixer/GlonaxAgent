@@ -24,7 +24,6 @@ class Watch:
     pps: bool | None = False
     device: str = ""
     remote: str = ""
-    # timing: bool | None = False  # Undocumented
 
     @staticmethod
     def from_json(data: dict) -> "Watch":

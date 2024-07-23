@@ -78,6 +78,7 @@ class Client:
         return result
 
     async def watch(self):
+        # TODO: Move to schema
         wd = asdict(self.watch_config)
         self.__writer.write(WATCH.format(json.dumps(wd)).encode())
         await self.__writer.drain()
