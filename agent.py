@@ -287,9 +287,10 @@ def echo(input):
     return input
 
 
-@dispatcher.rpc_call
-def glonax_instance() -> gclient.Instance:
-    return INSTANCE
+# TODO: Object of type UUID is not JSON serializable
+# @dispatcher.rpc_call
+# def glonax_instance() -> gclient.Instance:
+#     return INSTANCE
 
 
 async def websocket():
