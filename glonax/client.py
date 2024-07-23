@@ -120,8 +120,8 @@ class GlonaxStreamWriter:
     def __init__(self, writer: asyncio.StreamWriter):
         self.writer = writer
 
-    # TODO: Maybe move the actual encoding to the `Frame` class
-    async def write_frame(self, data: bytes):
+    async def write_frame(self, frame: Frame, data: bytes):
+        self.writer.write(frame.to_bytes())
         self.writer.write(data)
         await self.writer.drain()
 
@@ -134,9 +134,7 @@ class GlonaxStreamWriter:
             data (bytes): The data of the message.
         """
         frame = Frame(type, len(data))
-        self.writer.write(frame.to_bytes())
-        self.writer.write(data)
-        await self.writer.drain()
+        await self.write_frame(frame, data)
 
     async def motion(self, motion: Motion):
         """
@@ -182,7 +180,7 @@ class GlonaxStreamReader:
     def __init__(self, reader: asyncio.StreamReader):
         self.reader = reader
 
-    async def read_frame(self) -> bytes:
+    async def read_frame(self) -> tuple[Frame, bytes]:
         """
         Reads a frame from the stream.
 
@@ -191,20 +189,10 @@ class GlonaxStreamReader:
         """
         try:
             header = await self.reader.readexactly(10)
-            if header[:3] != b"LXR":
-                raise ProtocolError("Invalid header received")
-            if header[3:4] != b"\x03":
-                raise ProtocolError("Invalid protocol version")
+            frame = Frame.from_bytes(header)
 
-            message_type = MessageType(struct.unpack("B", header[4:5])[0])
-            message_length = struct.unpack(">H", header[5:7])[0]
-            if header[7:10] != b"\x00\x00\x00":
-                raise ProtocolError("Invalid header padding")
-            message = await self.reader.readexactly(message_length)
-            if len(message) != message_length:
-                raise ProtocolError("Invalid message length")
-
-            return header + message
+            message = await self.reader.readexactly(frame.message_length)
+            return frame, message
         except asyncio.IncompleteReadError:
             raise ConnectionError("Connection closed by server")
 
@@ -215,16 +203,8 @@ class GlonaxStreamReader:
         Returns:
             tuple[MessageType, bytes]: A tuple containing the message type and the message data.
         """
-
-        try:
-            header = await self.reader.readexactly(10)
-            frame = Frame.from_bytes(header)
-
-            message = await self.reader.readexactly(frame.message_length)
-            return frame.type, message
-
-        except asyncio.IncompleteReadError:
-            raise ConnectionError("Connection closed by server")
+        frame, message = await self.read_frame()
+        return frame.type, message
 
 
 async def open_unix_connection(

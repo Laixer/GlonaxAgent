@@ -157,7 +157,8 @@ class RTCGlonaxPeerConnection:
             @channel.on("message")
             async def on_message(message):
                 if channel.label == "command" and self.__glonax_session is not None:
-                    await self.__glonax_session.writer.write_frame(message)
+                    frame = gclient.Frame.from_bytes(message[:10])
+                    await self.__glonax_session.writer.write_frame(frame, message[10:])
 
     @property
     def user_agent(self) -> str:
@@ -184,8 +185,8 @@ class RTCGlonaxPeerConnection:
     async def __run_glonax_read(self, channel):
         while True:
             try:
-                data = await self.__glonax_session.reader.read_frame()
-                channel.send(data)
+                frame, message = await self.__glonax_session.reader.read_frame()
+                channel.send(frame.to_bytes() + message)
 
             except asyncio.CancelledError:
                 logger.info("Glonax task cancelled")
