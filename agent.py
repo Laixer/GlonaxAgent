@@ -505,16 +505,21 @@ async def main():
 
     try:
         if os.path.exists("instance.dat"):
-            with open("instance.dat", "rb") as f:
-                INSTANCE = pickle.load(f)
-                logger.info(f"Cacheed instance ID: {INSTANCE.id}")
-                logger.info(f"Cacheed instance model: {INSTANCE.model}")
-                logger.info(f"Cacheed instance type: {INSTANCE.machine_type}")
-                logger.info(f"Cacheed instance version: {INSTANCE.version_string}")
-                logger.info(f"Cacheed instance serial number: {INSTANCE.serial_number}")
-                instance_event.set()
+            try:
+                with open("instance.dat", "rb") as f:
+                    INSTANCE = pickle.load(f)
+                    logger.info(f"Cacheed instance ID: {INSTANCE.id}")
+                    logger.info(f"Cacheed instance model: {INSTANCE.model}")
+                    logger.info(f"Cacheed instance type: {INSTANCE.machine_type}")
+                    logger.info(f"Cacheed instance version: {INSTANCE.version_string}")
+                    logger.info(
+                        f"Cacheed instance serial number: {INSTANCE.serial_number}"
+                    )
+                    instance_event.set()
 
-                logger.debug("Instance event set")
+                    logger.debug("Instance event set")
+            except Exception:
+                os.remove("instance.dat")
 
         await remote_address()
 

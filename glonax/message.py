@@ -3,8 +3,6 @@ from enum import IntEnum
 from uuid import UUID
 from dataclasses import dataclass
 
-# from pydantic import BaseModel, Field
-
 
 class ControlType(IntEnum):
     HYDRAULIC_QUICK_DISCONNECT = 0x5
@@ -84,7 +82,7 @@ class Instance:
 class ModuleStatus:
     name: str
     state: int
-    error_code: int  # = Field(default=0, ge=0, le=255)
+    error_code: int
 
     def from_bytes(data):
         name_length = struct.unpack(">H", data[0:2])[0]
@@ -112,10 +110,10 @@ class EngineState(IntEnum):
 
 @dataclass
 class Engine:
-    driver_demand: int  # = Field(default=0, ge=0)
-    actual_engine: int  # = Field(default=0, ge=0)
-    rpm: int  # = Field(default=0, ge=0, le=8000)
-    state: EngineState  # = Field(default=EngineState.NOREQUEST)
+    driver_demand: int
+    actual_engine: int
+    rpm: int
+    state: EngineState
 
     def request_rpm(rpm: int):
         return Engine(
