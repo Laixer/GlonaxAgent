@@ -1,9 +1,9 @@
 import struct
-from enum import Enum, IntEnum
-from typing import Literal
+from enum import IntEnum
 from uuid import UUID
+from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+# from pydantic import BaseModel, Field
 
 
 class ControlType(IntEnum):
@@ -21,7 +21,8 @@ class ControlType(IntEnum):
     MACHINE_TRAVEL_ALARM = 0x20
 
 
-class Control(BaseModel):
+@dataclass
+class Control:
     type: ControlType
     value: bool
 
@@ -32,12 +33,13 @@ class Control(BaseModel):
         return Control(type=ControlType(data[0]), value=bool(data[1]))
 
 
-class Instance(BaseModel):
-    id: UUID  # TODO: frozen=True
-    model: str = Field(pattern=r"^[A-Z]{2}\d{3,5}$")
+@dataclass
+class Instance:
+    id: UUID
+    model: str
     machine_type: int
     version: tuple[int, int, int]
-    serial_number: str = Field(pattern=r"^[A-Z].\d{5}.[A-Z].\d{5}$")
+    serial_number: str
 
     @property
     def version_string(self):
@@ -78,10 +80,11 @@ class Instance(BaseModel):
         )
 
 
-class ModuleStatus(BaseModel):
+@dataclass
+class ModuleStatus:
     name: str
     state: int
-    error_code: int = Field(default=0, ge=0, le=255)
+    error_code: int  # = Field(default=0, ge=0, le=255)
 
     def from_bytes(data):
         name_length = struct.unpack(">H", data[0:2])[0]
@@ -107,11 +110,12 @@ class EngineState(IntEnum):
     REQUEST = 0x10
 
 
-class Engine(BaseModel):
-    driver_demand: int = Field(default=0, ge=0)
-    actual_engine: int = Field(default=0, ge=0)
-    rpm: int = Field(default=0, ge=0, le=8000)
-    state: EngineState = Field(default=EngineState.NOREQUEST)
+@dataclass
+class Engine:
+    driver_demand: int  # = Field(default=0, ge=0)
+    actual_engine: int  # = Field(default=0, ge=0)
+    rpm: int  # = Field(default=0, ge=0, le=8000)
+    state: EngineState  # = Field(default=EngineState.NOREQUEST)
 
     def request_rpm(rpm: int):
         return Engine(
@@ -157,7 +161,8 @@ class MotionType(IntEnum):
     CHANGE = 0x10
 
 
-class MotionChangeSet(BaseModel):
+@dataclass
+class MotionChangeSet:
     actuator: int
     value: int
 
@@ -171,7 +176,8 @@ class MotionChangeSet(BaseModel):
         return struct.pack(">H", self.actuator) + struct.pack(">h", self.value)
 
 
-class MotionStraightDrive(BaseModel):
+@dataclass
+class MotionStraightDrive:
     value: int
 
     def from_bytes(data):
@@ -183,7 +189,8 @@ class MotionStraightDrive(BaseModel):
         return struct.pack(">h", self.value)
 
 
-class Motion(BaseModel):
+@dataclass
+class Motion:
     type: MotionType
     straigh_drive: MotionStraightDrive | None = None
     change: list[MotionChangeSet] | None = None
@@ -260,25 +267,3 @@ class Motion(BaseModel):
 #             + struct.pack("fff", self.altitude, self.speed, self.heading)
 #             + struct.pack("B", self.satellites)
 #         )
-
-
-# TODO: Not part of glonax
-class RTCSessionDescription(BaseModel):
-    type: str = Literal["offer", "answer"]
-    sdp: str
-
-
-class ChannelMessageType(str, Enum):
-    COMMAND = "command"
-    SIGNAL = "signal"
-    CONTROL = "control"
-    PEER = "peer"
-    ERROR = "error"
-
-
-class Message(BaseModel):
-    type: ChannelMessageType
-    topic: str
-    payload: (
-        Control | Motion | Instance | ModuleStatus | RTCSessionDescription | Engine
-    ) = Field(union_mode="left_to_right")

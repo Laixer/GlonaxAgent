@@ -5,12 +5,10 @@ from enum import Enum
 
 from glonax import DEFAULT_USER_AGENT
 from glonax.message import (
-    ChannelMessageType,
     Control,
     ControlType,
     Instance,
     Engine,
-    Message,
     ModuleStatus,
     Motion,
 )
@@ -311,7 +309,9 @@ class Session:
             logger.debug(f"Instance ID: {self.instance}")
 
     @staticmethod
-    def __message_factory(message_type: MessageType, message: bytes) -> Message:
+    def __message_factory(
+        message_type: MessageType, message: bytes
+    ) -> Instance | ModuleStatus | Engine | Motion:
         """
         Creates a message object based on the message type and data.
 
@@ -357,7 +357,7 @@ class Session:
                 # TODO: Throw custom exception
                 raise ValueError(f"Unknown message type: {message_type}")
 
-    async def recv(self) -> Message | None:
+    async def recv(self) -> Instance | ModuleStatus | Engine | Motion | None:
         message_type, message = await self.reader.read()
         try:
             return self.__message_factory(message_type, message)
