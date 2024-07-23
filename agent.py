@@ -287,10 +287,37 @@ def echo(input):
     return input
 
 
-# TODO: Object of type UUID is not JSON serializable
-# @dispatcher.rpc_call
-# def glonax_instance() -> gclient.Instance:
-#     return INSTANCE
+@dispatcher.rpc_call
+def glonax_instance() -> gclient.Instance:
+    from machine import MachineService
+
+    # TODO: Object of type UUID is not JSON serializable
+    machine_service = MachineService()
+    return machine_service.instance
+
+
+@dispatcher.rpc_call
+def glonax_engine():
+    from machine import MachineService
+
+    machine_service = MachineService()
+    return machine_service.engine
+
+
+@dispatcher.rpc_call
+def glonax_motion():
+    from machine import MachineService
+
+    machine_service = MachineService()
+    return machine_service.motion
+
+
+@dispatcher.rpc_call
+def glonax_module_status(module: str):
+    from machine import MachineService
+
+    machine_service = MachineService()
+    return machine_service.module_status[module]
 
 
 async def websocket():

@@ -1,7 +1,8 @@
+import json
 import struct
 from enum import IntEnum
 from uuid import UUID
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 class ControlType(IntEnum):
@@ -77,6 +78,12 @@ class Instance:
             + self.serial_number.encode("utf-8")
         )
 
+    def json(self):
+        return json.dumps(asdict(self))
+
+    def from_json(data):
+        return Instance(**json.loads(data))
+
 
 @dataclass
 class ModuleStatus:
@@ -99,6 +106,12 @@ class ModuleStatus:
             + self.name.encode("utf-8")
             + struct.pack("BB", self.state, self.error_code)
         )
+
+    def json(self):
+        return json.dumps(asdict(self))
+
+    def from_json(data):
+        return ModuleStatus(**json.loads(data))
 
 
 class EngineState(IntEnum):
@@ -149,6 +162,12 @@ class Engine:
             + struct.pack(">H", self.rpm)
             + struct.pack("B", self.state)
         )
+
+    def json(self):
+        return json.dumps(asdict(self))
+
+    def from_json(data):
+        return Engine(**json.loads(data))
 
 
 class MotionType(IntEnum):
@@ -236,6 +255,12 @@ class Motion:
             return struct.pack("B", self.type) + self.straigh_drive.to_bytes()
         else:
             return struct.pack("B", self.type)
+
+    def json(self):
+        return json.dumps(asdict(self))
+
+    def from_json(data):
+        return Motion(**json.loads(data))
 
 
 # TODO: Not part of glonax
