@@ -12,14 +12,20 @@ import psutil
 import asyncio
 import websockets
 from systemd import journal
+from aioice import Candidate
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from log import ColorLogHandler
 from glonax import client as gclient
-from models import HostConfig
+from models import HostConfig, RTCIceCandidateParams
 from system import System
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCIceCandidate,
+)
+from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 import jsonrpc
@@ -142,7 +148,6 @@ class RTCGlonaxPeerConnection:
                 await self._stop()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info("RTC connection established")
-                glonax_peer_connection = self
             elif self.__peer_connection.connectionState == "closed":
                 await self._stop()
 
@@ -226,7 +231,16 @@ dispatcher = jsonrpc.Dispatcher()
 
 @dispatcher.rpc_call
 async def setup_rtc(offer: RTCSessionDescription) -> str:
+    global glonax_peer_connection
+
     path = config["glonax"]["unix_socket"]
+
+    # TODO: Move to JSON-RPC handler
+    if isinstance(offer, dict):
+        filtered_data = {
+            k: v for k, v in offer.items() if k in RTCSessionDescription.__annotations__
+        }
+        offer = RTCSessionDescription(**filtered_data)
 
     if offer.type != "offer":
         logger.error("Invalid offer type")
@@ -239,12 +253,31 @@ async def setup_rtc(offer: RTCSessionDescription) -> str:
         raise ValueError("RTC connection already established")
 
     peer_connection = RTCGlonaxPeerConnection(path)
+    glonax_peer_connection = peer_connection
     return await peer_connection.set_session_description(offer)
 
 
 @dispatcher.rpc_call
-async def update_rtc(candidate: RTCIceCandidate) -> str:
+async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
+    global glonax_peer_connection
+
     logger.info("Updating RTC connection with ICE candidate")
+
+    # TODO: Move to JSON-RPC handler
+    if isinstance(candidate_inc, dict):
+        filtered_data = {
+            k: v
+            for k, v in candidate_inc.items()
+            if k in RTCIceCandidateParams.__annotations__
+        }
+        candidate_param = RTCIceCandidateParams(**filtered_data)
+
+        sdp = candidate_param.candidate.replace("candidate:", "")
+        candidate = Candidate.from_sdp(sdp)
+
+        candidate = candidate_from_aioice(candidate)
+        candidate.sdpMid = candidate_param.sdpMid
+        candidate.sdpMLineIndex = candidate_param.sdpMLineIndex
 
     if glonax_peer_connection is None:
         logger.error("No RTC connection established")

@@ -1,5 +1,6 @@
 import datetime
 from pydantic import BaseModel
+from dataclasses import dataclass
 
 
 # TODO: Rename to HostTelemetry
@@ -32,6 +33,15 @@ class HostConfig(BaseModel):
     serial_number: str
 
 
+@dataclass
 class PeerConnectionParams:
     video_track: int = 0
     video_size: str = "1280x720"
+
+
+@dataclass
+class RTCIceCandidateParams:
+    candidate: str
+    sdpMid: str
+    sdpMLineIndex: int
+    usernameFragment: str
