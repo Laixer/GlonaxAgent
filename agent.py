@@ -296,6 +296,14 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
         candidate = candidate_from_aioice(candidate)
         candidate.sdpMid = candidate_param.sdpMid
         candidate.sdpMLineIndex = candidate_param.sdpMLineIndex
+    else:
+        sdp = candidate_inc.candidate.replace("candidate:", "")
+        candidate = Candidate.from_sdp(sdp)
+
+        candidate = candidate_from_aioice(candidate)
+        candidate.sdpMid = candidate_inc.sdpMid
+        candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
+        print(candidate)
 
     if glonax_peer_connection is None:
         raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")

@@ -15,6 +15,7 @@ class JSONRPCRuntimeError(RuntimeError):
     Attributes:
         message -- explanation of the error
     """
+
     pass
 
 
