@@ -18,7 +18,7 @@ from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from log import ColorLogHandler
 from glonax import client as gclient
-from models import HostConfig, RTCIceCandidateParams
+from models import HostConfig, GlonaxPeerConnectionParams, RTCIceCandidateParams
 from system import System
 from aiortc import (
     RTCPeerConnection,
@@ -107,19 +107,29 @@ async def glonax_server():
 glonax_peer_connection = None
 
 
-class RTCGlonaxPeerConnection:
+class GlonaxPeerConnection:
     global glonax_peer_connection
 
-    # TODO: pass PeerConnectionParams as a parameter
-    def __init__(self, socket_path: str, user_agent: str = "glonax-rtc/1.0"):
-        self.__socket_path = socket_path
-        self.__user_agent = user_agent
+    allowed_video_tracks = [0]
+    allowed_video_sizes = ["1920x1080", "1280x720", "640x480"]
 
-        self.__video_track = "/dev/video0"
+    def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
+        self.__socket_path = socket_path
+        self.__user_agent = params.user_agent
+
+        self.__video_track = (
+            f"/dev/video{params.video_track}"
+            if params.video_track in self.allowed_video_tracks
+            else "/dev/video0"
+        )
+        video_size = (
+            params.video_size
+            if params.video_size in self.allowed_video_sizes
+            else "640x480"
+        )
         self.__av_options = {
             "framerate": "30",
-            # "video_size": "640x480",
-            "video_size": "1280x720",
+            "video_size": video_size,
             "preset": "ultrafast",
             "tune": "zerolatency",
         }
@@ -228,29 +238,40 @@ dispatcher = jsonrpc.Dispatcher()
 
 
 @dispatcher.rpc_call
-async def setup_rtc(offer: RTCSessionDescription) -> str:
+async def setup_rtc(
+    params: GlonaxPeerConnectionParams, offer: RTCSessionDescription
+) -> str:
     global glonax_peer_connection
 
     path = config["glonax"]["unix_socket"]
 
     # TODO: Move to JSON-RPC handler
+    if isinstance(params, dict):
+        filtered_data = {
+            k: v
+            for k, v in params.items()
+            if k in GlonaxPeerConnectionParams.__annotations__
+        }
+        params = GlonaxPeerConnectionParams(**filtered_data)
+
     if isinstance(offer, dict):
         filtered_data = {
             k: v for k, v in offer.items() if k in RTCSessionDescription.__annotations__
         }
         offer = RTCSessionDescription(**filtered_data)
+        # print("offer", offer)
 
     if offer.type != "offer":
         logger.error("Invalid offer type")
-        raise ValueError("Invalid offer type")
+        return
 
     logger.info("Setting up RTC connection")
 
     if glonax_peer_connection is not None:
         logger.error("RTC connection already established")
-        raise ValueError("RTC connection already established")
+        return
 
-    peer_connection = RTCGlonaxPeerConnection(path)
+    peer_connection = GlonaxPeerConnection(path, params)
     glonax_peer_connection = peer_connection
 
     await peer_connection.set_remote_description(offer)
@@ -281,7 +302,8 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
 
     if glonax_peer_connection is None:
         logger.error("No RTC connection established")
-        raise ValueError("No RTC connection established")
+        # raise ValueError("No RTC connection established")
+        return
 
     await glonax_peer_connection.add_ice_candidate(candidate)
 

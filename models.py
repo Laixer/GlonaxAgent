@@ -34,9 +34,10 @@ class HostConfig(BaseModel):
 
 
 @dataclass
-class PeerConnectionParams:
+class GlonaxPeerConnectionParams:
     video_track: int = 0
     video_size: str = "1280x720"
+    user_agent: str = "glonax-rtc/1.0"
 
 
 @dataclass
