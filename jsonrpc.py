@@ -7,6 +7,17 @@ from dataclasses import asdict, dataclass
 logger = logging.getLogger(__name__)
 
 
+class JSONRPCRuntimeError(RuntimeError):
+    """Exception raised for JSON-RPC runtime errors.
+
+    This exception is raised when there is a runtime error in the JSON-RPC communication.
+
+    Attributes:
+        message -- explanation of the error
+    """
+    pass
+
+
 @dataclass
 class JSONRPCRequest:
     """
@@ -113,6 +124,11 @@ class JSONRPCInvalidParams(JSONRPCError):
         super().__init__(id, -32602, message="Invalid params", jsonrpc="2.0")
 
 
+class JSONRPCInternalError(JSONRPCError):
+    def __init__(self, id: int):
+        super().__init__(id, -32603, message="Internal error", jsonrpc="2.0")
+
+
 async def invoke(
     callables: set[Callable], input: str | dict | list, prefix: str = "rpc_"
 ) -> JSONRPCResponse | JSONRPCError | None:
@@ -168,14 +184,17 @@ async def invoke(
         return JSONRPCMethodNotFound(request.id)
 
     except json.JSONDecodeError:
-        logger.error("JSON decode error", exc_info=True)
+        logger.warning("JSON-RPC 2.0: JSON decode error")
         return JSONRPCParseError()
     except TypeError:
-        logger.error("Invalid params", exc_info=True)
+        logger.warning("JSON-RPC 2.0: Invalid params for method")
         return JSONRPCInvalidParams(data.get("id", None))
+    except JSONRPCRuntimeError as e:
+        logger.warning(f"JSON-RPC 2.0: Runtime error: {str(e)}")
+        return JSONRPCError(data.get("id", None), 32000, str(e))
     except Exception as e:
         logger.error(f"Internal error: {str(e)}", exc_info=True)
-        return JSONRPCError(data.get("id", None), -32603, "Internal error")
+        return JSONRPCInternalError(data.get("id", None))
 
 
 class Dispatcher(set):

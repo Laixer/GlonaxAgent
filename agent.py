@@ -259,17 +259,14 @@ async def setup_rtc(
             k: v for k, v in offer.items() if k in RTCSessionDescription.__annotations__
         }
         offer = RTCSessionDescription(**filtered_data)
-        # print("offer", offer)
 
     if offer.type != "offer":
-        logger.error("Invalid offer type")
-        return
+        raise jsonrpc.JSONRPCRuntimeError("Invalid offer type")
 
     logger.info("Setting up RTC connection")
 
     if glonax_peer_connection is not None:
-        logger.error("RTC connection already established")
-        return
+        raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
 
     peer_connection = GlonaxPeerConnection(path, params)
     glonax_peer_connection = peer_connection
@@ -301,9 +298,7 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
         candidate.sdpMLineIndex = candidate_param.sdpMLineIndex
 
     if glonax_peer_connection is None:
-        logger.error("No RTC connection established")
-        # raise ValueError("No RTC connection established")
-        return
+        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
 
     await glonax_peer_connection.add_ice_candidate(candidate)
 
@@ -314,7 +309,7 @@ async def reboot():
         logger.info("Rebooting system")
         await System.reboot()
     else:
-        logger.error("User does not have sudo privileges")
+        raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
 
 @dispatcher.rpc_call
@@ -326,7 +321,7 @@ async def systemctl(operation: str, service: str):
         logger.info(f"Running systemctl {operation} {service}")
         await System.systemctl(operation, service)
     else:
-        logger.error("User does not have sudo privileges")
+        raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
 
 @dispatcher.rpc_call
@@ -335,7 +330,7 @@ async def apt(operation: str, package: str):
         logger.info(f"Running apt {operation} {package}")
         await System.apt(operation, package)
     else:
-        logger.error("User does not have sudo privileges")
+        raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
 
 @dispatcher.rpc_call
