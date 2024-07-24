@@ -30,3 +30,8 @@ class HostConfig(BaseModel):
     model: str
     version: str
     serial_number: str
+
+
+class PeerConnectionParams:
+    video_track: int = 0
+    video_size: str = "1280x720"
