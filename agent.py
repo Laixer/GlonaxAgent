@@ -178,15 +178,13 @@ class RTCGlonaxPeerConnection:
     def video_track(self) -> str:
         return self.__video_track
 
-    async def set_session_description(
-        self, offer: RTCSessionDescription
-    ) -> RTCSessionDescription:
-        # TODO: Throws AttributeError: 'dict' object has no attribute 'splitlines'
+    async def set_remote_description(self, offer: RTCSessionDescription) -> None:
         await self.__peer_connection.setRemoteDescription(offer)
+
+    async def create_answer(self) -> RTCSessionDescription:
         answer = await self.__peer_connection.createAnswer()
         await self.__peer_connection.setLocalDescription(answer)
-
-        return self.__peer_connection.localDescription
+        return answer
 
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
         await self.__peer_connection.addIceCandidate(candidate)
@@ -254,7 +252,9 @@ async def setup_rtc(offer: RTCSessionDescription) -> str:
 
     peer_connection = RTCGlonaxPeerConnection(path)
     glonax_peer_connection = peer_connection
-    return await peer_connection.set_session_description(offer)
+
+    await peer_connection.set_remote_description(offer)
+    return await peer_connection.create_answer()
 
 
 @dispatcher.rpc_call
