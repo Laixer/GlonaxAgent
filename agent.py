@@ -98,16 +98,11 @@ async def glonax_server():
         logger.critical(f"Unknown error: {traceback.format_exc()}")
 
 
-peers = set()
-
-
-class PeerConnectionParams:
-    video_track: int = 0
-    video_size: str = "1280x720"
+glonax_peer_connection = None
 
 
 class RTCGlonaxPeerConnection:
-    global peers
+    global glonax_peer_connection
 
     # TODO: pass PeerConnectionParams as a parameter
     def __init__(self, socket_path: str, user_agent: str = "glonax-rtc/1.0"):
@@ -147,7 +142,7 @@ class RTCGlonaxPeerConnection:
                 await self._stop()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info("RTC connection established")
-                peers.add(self)
+                glonax_peer_connection = self
             elif self.__peer_connection.connectionState == "closed":
                 await self._stop()
 
@@ -178,7 +173,6 @@ class RTCGlonaxPeerConnection:
     def video_track(self) -> str:
         return self.__video_track
 
-    # TODO: pass RTCSessionDescription
     async def set_session_description(
         self, offer: RTCSessionDescription
     ) -> RTCSessionDescription:
@@ -188,6 +182,9 @@ class RTCGlonaxPeerConnection:
         await self.__peer_connection.setLocalDescription(answer)
 
         return self.__peer_connection.localDescription
+
+    async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
+        await self.__peer_connection.addIceCandidate(candidate)
 
     async def __run_glonax_read(self, channel):
         while True:
@@ -220,36 +217,40 @@ class RTCGlonaxPeerConnection:
             await self.__glonax_session.close()
         # TODO: We should not be calling this
         self.__webcam._stop(self.__webcam.video)
-        peers.remove(self)
+        glonax_peer_connection = None
 
 
 # TODO: Add roles to the RPC calls
 dispatcher = jsonrpc.Dispatcher()
 
 
-# TODO: Accept and return 'RTCSessionDescription' as a parameter
 @dispatcher.rpc_call
-async def setup_rtc(sdp: str) -> str:
+async def setup_rtc(offer: RTCSessionDescription) -> str:
     path = config["glonax"]["unix_socket"]
+
+    if offer.type != "offer":
+        logger.error("Invalid offer type")
+        raise ValueError("Invalid offer type")
 
     logger.info("Setting up RTC connection")
 
-    # FUTURE: Support multiple RTC connections
-    if len(peers) > 0:
+    if glonax_peer_connection is not None:
         logger.error("RTC connection already established")
-        return None
+        raise ValueError("RTC connection already established")
 
     peer_connection = RTCGlonaxPeerConnection(path)
-    offer = RTCSessionDescription(type="offer", sdp=sdp)
-    answer = await peer_connection.set_session_description(offer)
-
-    return answer.sdp
+    return await peer_connection.set_session_description(offer)
 
 
 @dispatcher.rpc_call
 async def update_rtc(candidate: RTCIceCandidate) -> str:
     logger.info("Updating RTC connection with ICE candidate")
-    logger.debug(f"ICE candidate: {candidate}")
+
+    if glonax_peer_connection is None:
+        logger.error("No RTC connection established")
+        raise ValueError("No RTC connection established")
+
+    await glonax_peer_connection.add_ice_candidate(candidate)
 
 
 @dispatcher.rpc_call
