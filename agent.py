@@ -194,7 +194,7 @@ class GlonaxPeerConnection:
     async def create_answer(self) -> RTCSessionDescription:
         answer = await self.__peer_connection.createAnswer()
         await self.__peer_connection.setLocalDescription(answer)
-        return answer
+        return self.__peer_connection.localDescription
 
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
         await self.__peer_connection.addIceCandidate(candidate)
