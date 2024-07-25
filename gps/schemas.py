@@ -226,7 +226,7 @@ class PRN:
 
 @dataclass
 class Sky:
-    time: datetime
+    time: datetime | None = None
     device: str | None = None
     nSat: int | None = None
     gdop: float | None = None
