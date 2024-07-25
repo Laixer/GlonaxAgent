@@ -1,10 +1,10 @@
-import argparse
+import time
 import asyncio
 import websockets
-import logging
-import time
 
-from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCIceCandidate, RTCSessionDescription
+
+from glonax.message import Engine, Instance, Motion
 
 
 async def consume_signaling(pc, signaling):
@@ -94,7 +94,6 @@ import json
 from jsonrpc import (
     JSONRPCRequest,
     JSONRPCResponse,
-    JSONRPCError,
 )
 
 from abc import ABC, abstractmethod
@@ -140,14 +139,17 @@ class GlonaxRPC(WebsocketRPC):
     async def echo(self, message: str) -> str:
         return await self._remote_call("echo", message)
 
-    # async def glonax_instance(self):
-    #     return await self._remote_call("glonax_instance")
+    async def glonax_instance(self):
+        data = await self._remote_call("glonax_instance")
+        return Instance(**data)
 
-    async def glonax_engine(self):
-        return await self._remote_call("glonax_engine")
+    async def glonax_engine(self) -> Engine:
+        data = await self._remote_call("glonax_engine")
+        return Engine(**data)
 
-    async def glonax_motion(self):
-        return await self._remote_call("glonax_motion")
+    async def glonax_motion(self) -> Motion:
+        data = await self._remote_call("glonax_motion")
+        return Motion(**data)
 
     async def apt(self, operation: str, package: str):
         await self._remote_call("apt", operation, package)
@@ -159,8 +161,8 @@ async def main():
     async with GlonaxRPC(uri) as rpc:
         # print(await rpc.echo("Hello, World"))
         # print(await rpc.glonax_instance())
-        # print(await rpc.glonax_engine())
-        print(await rpc.glonax_motion())
+        print(await rpc.glonax_engine())
+        # print(await rpc.glonax_motion())
         # await rpc.apt("upgrade", "-")
 
 
