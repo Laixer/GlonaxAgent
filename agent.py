@@ -108,8 +108,6 @@ glonax_peer_connection = None
 
 
 class GlonaxPeerConnection:
-    global glonax_peer_connection
-
     allowed_video_tracks = [0]
     allowed_video_sizes = ["1920x1080", "1280x720", "640x480"]
 
@@ -221,6 +219,8 @@ class GlonaxPeerConnection:
         await self.__glonax_session.motion_stop_all()
 
     async def _stop(self) -> None:
+        global glonax_peer_connection
+
         logger.info("Stopping peer connection")
 
         if self.__task is not None:
