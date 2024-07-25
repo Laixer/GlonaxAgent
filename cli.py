@@ -97,10 +97,36 @@ from jsonrpc import (
     JSONRPCError,
 )
 
+from abc import ABC, abstractmethod
 
-class RPCProxy:
+
+class RPCProxyBase(ABC):
+    @abstractmethod
+    async def remote_call(self, req: str) -> str:
+        pass
+
+    async def _remote_call(self, method: str, *args):
+        req = JSONRPCRequest(id=1, method=method, params=args)
+
+        resp = await self.remote_call(req.json())
+        data = json.loads(resp)
+        if "error" in data:
+            # response = JSONRPCError(**resp)
+            raise Exception(
+                f"Received error from the server: {resp['error']['message']}"
+            )
+        else:
+            response = JSONRPCResponse(**data)
+            return response.result
+
+
+class WebsocketRPC(RPCProxyBase):
     def __init__(self, uri: str):
         self.uri = uri
+
+    async def remote_call(self, req: str) -> str:
+        await self.websocket.send(req)
+        return await self.websocket.recv()
 
     async def __aenter__(self):
         self.websocket = await websockets.connect(self.uri)
@@ -109,28 +135,19 @@ class RPCProxy:
     async def __aexit__(self, exc_type, exc, tb):
         await self.websocket.close()
 
-    async def _remote_call(self, method: str, *args):
-        req = JSONRPCRequest(id=1, method=method, params=args)
 
-        await self.websocket.send(req.json())
-        resp = json.loads(await self.websocket.recv())
-        if "error" in resp:
-            # response = JSONRPCError(**resp)
-            print(resp)
-            raise Exception(
-                f"Received error from the server: {resp['error']['message']}"
-            )
-        else:
-            response = JSONRPCResponse(**resp)
-            return response.result
-
-
-class GlonaxRPC(RPCProxy):
+class GlonaxRPC(WebsocketRPC):
     async def echo(self, message: str) -> str:
         return await self._remote_call("echo", message)
 
     # async def glonax_instance(self):
     #     return await self._remote_call("glonax_instance")
+
+    async def glonax_engine(self):
+        return await self._remote_call("glonax_engine")
+
+    async def glonax_motion(self):
+        return await self._remote_call("glonax_motion")
 
     async def apt(self, operation: str, package: str):
         await self._remote_call("apt", operation, package)
@@ -139,11 +156,12 @@ class GlonaxRPC(RPCProxy):
 async def main():
     uri = "wss://edge.laixer.equipment/api/app/d6d1a2db-52b9-4abb-8bea-f2d0537432e2/ws"
 
-    proxy = GlonaxRPC(uri)
-    async with proxy as rpc:
-        # print(await rpc.echo("Hello, World", 435))
+    async with GlonaxRPC(uri) as rpc:
+        # print(await rpc.echo("Hello, World"))
         # print(await rpc.glonax_instance())
-        await rpc.apt("upgrade", "-")
+        # print(await rpc.glonax_engine())
+        print(await rpc.glonax_motion())
+        # await rpc.apt("upgrade", "-")
 
 
 if __name__ == "__main__":
