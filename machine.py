@@ -1,7 +1,7 @@
 import time
 import logging
 
-from glonax.message import Engine, ModuleStatus, Motion
+from glonax.message import Engine, Instance, ModuleStatus, Motion
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,8 @@ class MachineService:
         return cls._instance
 
     def __init__(self):
+        if not hasattr(self, "instance"):
+            self.instance = None
         if not hasattr(self, "engine"):
             self.engine = None
         if not hasattr(self, "module_status"):
@@ -23,6 +25,9 @@ class MachineService:
             self.motion = None
 
     def feed(self, message):
+        if isinstance(message, Instance):
+            if self.instance is None or self.instance != message:
+                self.instance = message
         if isinstance(message, Engine):
             if self.engine is None or self.engine != message:
                 self.engine = message
@@ -38,11 +43,17 @@ class MachineService:
                 logger.info(f"Motion changed: {message}")
         self.timestamp = time.time()
 
-    def last_engine(self) -> Engine:
+    @property
+    def instance(self) -> Instance:
+        return self.instance
+
+    @property
+    def last_engine(self) -> Engine | None:
         return self.engine
+
+    @property
+    def last_motion(self) -> Motion | None:
+        return self.motion
 
     def last_module_status(self, name: str) -> ModuleStatus | None:
         return self.module_status.get(name)
-
-    def last_motion(self) -> Motion:
-        return self.motion

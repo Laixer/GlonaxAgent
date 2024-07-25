@@ -73,6 +73,7 @@ async def glonax_server():
     try:
         logger.info(f"Connecting to glonax at {path}")
 
+        machine_service = MachineService()
         user_agent = "glonax-agent/1.0"
         async with await gclient.open_session(path, user_agent=user_agent) as session:
             logger.info(f"Glonax connected to {path}")
@@ -84,13 +85,13 @@ async def glonax_server():
 
             INSTANCE = session.instance
             instance_event.set()
+            machine_service.feed(session.instance)
 
             logger.debug("Instance event set")
 
             with open("instance.dat", "wb") as f:
                 pickle.dump(session.instance, f)
 
-            machine_service = MachineService()
             async for message in session:
                 machine_service.feed(message)
 
@@ -324,27 +325,27 @@ def glonax_instance() -> gclient.Instance:
 
 
 @dispatcher.rpc_call
-def glonax_engine():
+def glonax_engine() -> gclient.Engine | None:
     from machine import MachineService
 
     machine_service = MachineService()
-    return machine_service.engine
+    return machine_service.last_engine
 
 
 @dispatcher.rpc_call
-def glonax_motion():
+def glonax_motion() -> gclient.Motion | None:
     from machine import MachineService
 
     machine_service = MachineService()
-    return machine_service.motion
+    return machine_service.last_motion
 
 
 @dispatcher.rpc_call
-def glonax_module_status(module: str):
+def glonax_module_status(module: str) -> gclient.ModuleStatus | None:
     from machine import MachineService
 
     machine_service = MachineService()
-    return machine_service.module_status[module]
+    return machine_service.last_module_status(module)
 
 
 async def websocket():
