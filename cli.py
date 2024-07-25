@@ -101,7 +101,9 @@ class RPCProxyBase(ABC):
     async def remote_call(self, req: str) -> str:
         pass
 
-    async def _remote_call(self, method: str, params=[], return_type=None):
+    async def _remote_call(
+        self, method: str, params: list | dict = [], return_type=None
+    ):
         req = JSONRPCRequest(id=1, method=method, params=params)
 
         resp = await self.remote_call(req.json())
@@ -113,6 +115,10 @@ class RPCProxyBase(ABC):
         else:
             response = JSONRPCResponse(**data)
             if return_type:
+                # TODO: This is temporary
+                if return_type == str:
+                    return return_type(response.result)
+                # TODO: check if return_type is dataclass
                 return return_type(**response.result)
 
 
@@ -134,7 +140,7 @@ class WebsocketRPC(RPCProxyBase):
 
 class GlonaxRPC(WebsocketRPC):
     async def echo(self, message: str) -> str:
-        return await self._remote_call("echo", message)
+        return await self._remote_call("echo", params=[message], return_type=str)
 
     async def glonax_instance(self) -> Instance:
         return await self._remote_call("glonax_instance", return_type=Instance)
@@ -146,18 +152,18 @@ class GlonaxRPC(WebsocketRPC):
         return await self._remote_call("glonax_motion", return_type=Motion)
 
     async def apt(self, operation: str, package: str):
-        await self._remote_call("apt", operation, package)
+        await self._remote_call("apt", params=[operation, package])
 
 
 async def main():
     uri = "wss://edge.laixer.equipment/api/app/d6d1a2db-52b9-4abb-8bea-f2d0537432e2/ws"
 
     async with GlonaxRPC(uri) as rpc:
-        # print(await rpc.echo("Hello, World"))
+        print(await rpc.echo("Hello, World"))
         # print(await rpc.glonax_instance())
         print(await rpc.glonax_engine())
         print(await rpc.glonax_motion())
-        # await rpc.apt("upgrade", "-")
+        await rpc.apt("upgrade", "-")
 
 
 if __name__ == "__main__":
