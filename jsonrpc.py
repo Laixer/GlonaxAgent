@@ -1,7 +1,9 @@
 import json
 import asyncio
 import logging
-from typing import Callable
+import inspect
+import dataclasses
+from typing import Callable, get_type_hints
 from dataclasses import asdict, dataclass
 
 logger = logging.getLogger(__name__)
@@ -161,22 +163,58 @@ async def invoke(
         ):
             return JSONRPCInvalidRequest(data.get("id", None))
 
+        def map_to_dataclass(params: list[dict], callable: Callable) -> list:
+            type_hints = get_type_hints(callable)
+
+            param_results = []
+
+            sig = inspect.signature(callable)
+            for param, (param_name, _) in zip(params, sig.parameters.items()):
+                param_type = type_hints.get(param_name, None)
+                if dataclasses.is_dataclass(param_type):
+                    param_results.append(param_type(**param))
+
+            return param_results
+
         request = JSONRPCRequest(**data)
         for callable in callables:
             method = request.method.strip()
             if method == callable.__name__ or prefix + method == callable.__name__:
                 if asyncio.iscoroutinefunction(callable):
-                    result = (
-                        await callable(**request.params)
-                        if isinstance(request.params, dict)
-                        else await callable(*request.params)
-                    )
+                    # TODO: Move into a separate function
+                    if isinstance(request.params, dict):
+                        param_results = map_to_dataclass([request.params], callable)
+                        if param_results:
+                            result = await callable(*param_results)
+                        else:
+                            result = await callable(**request.params)
+                    elif isinstance(request.params, list):
+                        if all(isinstance(param, dict) for param in request.params):
+                            print("Params are list of dicts")
+                            param_results = map_to_dataclass(request.params, callable)
+                            result = await callable(*param_results)
+                        else:
+                            result = await callable(*request.params)
+                    else:
+                        result = await callable(*request.params)
+
                 else:
-                    result = (
-                        callable(**request.params)
-                        if isinstance(request.params, dict)
-                        else callable(*request.params)
-                    )
+                    # TODO: Move into a separate function
+                    if isinstance(request.params, dict):
+                        param_results = map_to_dataclass([request.params], callable)
+                        if param_results:
+                            result = callable(*param_results)
+                        else:
+                            result = callable(**request.params)
+                    elif isinstance(request.params, list):
+                        if all(isinstance(param, dict) for param in request.params):
+                            print("Params are list of dicts")
+                            param_results = map_to_dataclass(request.params, callable)
+                            result = callable(*param_results)
+                        else:
+                            result = callable(*request.params)
+                    else:
+                        result = callable(*request.params)
 
                 if request.id is None:
                     return
