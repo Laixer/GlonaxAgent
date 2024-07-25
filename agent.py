@@ -245,21 +245,6 @@ async def setup_rtc(
 
     path = config["glonax"]["unix_socket"]
 
-    # TODO: Move to JSON-RPC handler
-    if isinstance(params, dict):
-        filtered_data = {
-            k: v
-            for k, v in params.items()
-            if k in GlonaxPeerConnectionParams.__annotations__
-        }
-        params = GlonaxPeerConnectionParams(**filtered_data)
-
-    if isinstance(offer, dict):
-        filtered_data = {
-            k: v for k, v in offer.items() if k in RTCSessionDescription.__annotations__
-        }
-        offer = RTCSessionDescription(**filtered_data)
-
     if offer.type != "offer":
         raise jsonrpc.JSONRPCRuntimeError("Invalid offer type")
 
@@ -281,29 +266,12 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
 
     logger.info("Updating RTC connection with ICE candidate")
 
-    # TODO: Move to JSON-RPC handler
-    if isinstance(candidate_inc, dict):
-        filtered_data = {
-            k: v
-            for k, v in candidate_inc.items()
-            if k in RTCIceCandidateParams.__annotations__
-        }
-        candidate_param = RTCIceCandidateParams(**filtered_data)
+    sdp = candidate_inc.candidate.replace("candidate:", "")
+    candidate = Candidate.from_sdp(sdp)
 
-        sdp = candidate_param.candidate.replace("candidate:", "")
-        candidate = Candidate.from_sdp(sdp)
-
-        candidate = candidate_from_aioice(candidate)
-        candidate.sdpMid = candidate_param.sdpMid
-        candidate.sdpMLineIndex = candidate_param.sdpMLineIndex
-    else:
-        sdp = candidate_inc.candidate.replace("candidate:", "")
-        candidate = Candidate.from_sdp(sdp)
-
-        candidate = candidate_from_aioice(candidate)
-        candidate.sdpMid = candidate_inc.sdpMid
-        candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
-        print(candidate)
+    candidate = candidate_from_aioice(candidate)
+    candidate.sdpMid = candidate_inc.sdpMid
+    candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
 
     if glonax_peer_connection is None:
         raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
