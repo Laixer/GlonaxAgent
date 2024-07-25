@@ -31,6 +31,12 @@ class Control:
     def from_bytes(data):
         return Control(type=ControlType(data[0]), value=bool(data[1]))
 
+    def json(self):
+        return json.dumps(asdict(self))
+
+    def from_json(data):
+        return Control(**json.loads(data))
+
 
 @dataclass
 class Instance:

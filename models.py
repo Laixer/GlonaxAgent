@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from dataclasses import dataclass
 
 
+# TODO: Remove BaseModel, add dataclass
 # TODO: Rename to HostTelemetry
 class Telemetry(BaseModel):
     memory_used: float
@@ -13,6 +14,7 @@ class Telemetry(BaseModel):
     created_at: datetime.timedelta | None = None
 
 
+# TODO: Remove BaseModel, add dataclass
 class GpsTelemetry(BaseModel):
     mode: int
     lat: float | None = None
@@ -21,6 +23,7 @@ class GpsTelemetry(BaseModel):
     speed: float | None = None
 
 
+# TODO: Remove BaseModel, add dataclass
 class HostConfig(BaseModel):
     # instance: UUID # TODO: Add this field
     name: str | None = None

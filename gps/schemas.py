@@ -1,6 +1,7 @@
-from dataclasses import dataclass
-from datetime import datetime
+import json
 from enum import IntEnum
+from datetime import datetime
+from dataclasses import asdict, dataclass
 
 
 class Mode(IntEnum):
@@ -25,6 +26,9 @@ class Watch:
     device: str = ""
     remote: str = ""
 
+    def json(self) -> str:
+        return json.dumps(asdict(self))
+
     @staticmethod
     def from_json(data: dict) -> "Watch":
         filtered_data = {k: v for k, v in data.items() if k in Watch.__annotations__}
@@ -42,6 +46,9 @@ class Version:
     @property
     def proto(self) -> tuple[int, int]:
         return self.proto_major, self.proto_minor
+
+    def json(self) -> str:
+        return json.dumps(asdict(self))
 
     @staticmethod
     def from_json(data: dict) -> "Version":
@@ -67,6 +74,9 @@ class Device:
     subtype: str | None = None
     subtype1: str | None = None
 
+    def json(self) -> str:
+        return json.dumps(asdict(self))
+
     @staticmethod
     def from_json(data: dict) -> "Device":
         filtered_data = {k: v for k, v in data.items() if k in Device.__annotations__}
@@ -77,6 +87,9 @@ class Device:
 class Devices:
     devices: list[Device]
     remote: str | None = None
+
+    def json(self) -> str:
+        return json.dumps(asdict(self))
 
     @staticmethod
     def from_json(data: dict) -> "Devices":
@@ -140,6 +153,9 @@ class TPV:
     wspeedt: float | None = None
     wtemp: float | None = None
 
+    def json(self) -> str:
+        return json.dumps(asdict(self))
+
     @staticmethod
     def from_json(data: dict) -> "TPV":
         filtered_data = {k: v for k, v in data.items() if k in TPV.__annotations__}
@@ -160,6 +176,9 @@ class GST:
     ve: float | None = None
     vn: float | None = None
     vu: float | None = None
+
+    def json(self) -> str:
+        return json.dumps(asdict(self))
 
     @staticmethod
     def from_json(data: dict) -> "GST":
@@ -243,6 +262,9 @@ class Sky:
     xdop: float | None = None
     ydop: float | None = None
 
+    def json(self) -> str:
+        return json.dumps(asdict(self))
+
     @staticmethod
     def from_json(data: dict) -> "Sky":
         filtered_data = {k: v for k, v in data.items() if k in Sky.__annotations__}
@@ -269,6 +291,10 @@ class Error:
     def __str__(self) -> str:
         return self.message
 
+    def json(self) -> str:
+        return json.dumps(asdict(self))
+
+    # TODO: This accepts a dict, not a str
     @staticmethod
     def from_json(data: dict) -> "Error":
         filtered_data = {k: v for k, v in data.items() if k in Error.__annotations__}
