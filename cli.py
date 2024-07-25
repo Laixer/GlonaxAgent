@@ -91,10 +91,7 @@ async def run_offer(pc, signaling):
 #         loop.run_until_complete(signaling.close())
 
 import json
-from jsonrpc import (
-    JSONRPCRequest,
-    JSONRPCResponse,
-)
+from jsonrpc import JSONRPCRequest, JSONRPCResponse, JSONRPCError
 
 from abc import ABC, abstractmethod
 
@@ -104,19 +101,19 @@ class RPCProxyBase(ABC):
     async def remote_call(self, req: str) -> str:
         pass
 
-    async def _remote_call(self, method: str, *args):
-        req = JSONRPCRequest(id=1, method=method, params=args)
+    async def _remote_call(self, method: str, params=[], return_type=None):
+        req = JSONRPCRequest(id=1, method=method, params=params)
 
         resp = await self.remote_call(req.json())
         data = json.loads(resp)
         if "error" in data:
-            # response = JSONRPCError(**resp)
-            raise Exception(
-                f"Received error from the server: {resp['error']['message']}"
-            )
+            response = JSONRPCError(id=data["id"], **data["error"])
+            # TODO: raise custom exception
+            raise Exception(f"Error: {response.code} - {response.message}")
         else:
             response = JSONRPCResponse(**data)
-            return response.result
+            if return_type:
+                return return_type(**response.result)
 
 
 class WebsocketRPC(RPCProxyBase):
@@ -139,17 +136,14 @@ class GlonaxRPC(WebsocketRPC):
     async def echo(self, message: str) -> str:
         return await self._remote_call("echo", message)
 
-    async def glonax_instance(self):
-        data = await self._remote_call("glonax_instance")
-        return Instance(**data)
+    async def glonax_instance(self) -> Instance:
+        return await self._remote_call("glonax_instance", return_type=Instance)
 
     async def glonax_engine(self) -> Engine:
-        data = await self._remote_call("glonax_engine")
-        return Engine(**data)
+        return await self._remote_call("glonax_engine", return_type=Engine)
 
     async def glonax_motion(self) -> Motion:
-        data = await self._remote_call("glonax_motion")
-        return Motion(**data)
+        return await self._remote_call("glonax_motion", return_type=Motion)
 
     async def apt(self, operation: str, package: str):
         await self._remote_call("apt", operation, package)
@@ -162,7 +156,7 @@ async def main():
         # print(await rpc.echo("Hello, World"))
         # print(await rpc.glonax_instance())
         print(await rpc.glonax_engine())
-        # print(await rpc.glonax_motion())
+        print(await rpc.glonax_motion())
         # await rpc.apt("upgrade", "-")
 
 
