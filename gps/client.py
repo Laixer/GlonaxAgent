@@ -27,10 +27,12 @@ class Client:
 
         self.watch_config = watch_config
 
-    async def __read(self) -> dict:
+    async def __read(self) -> tuple[str, str]:
         try:
-            data = await self.__reader.readline()
-            return json.loads(data)
+            json_data = await self.__reader.readline()
+            data = json.loads(json_data)
+            class_type = data.get("class").upper()
+            return class_type, json_data
         except asyncio.IncompleteReadError:
             raise ConnectionError("Connection closed by server")
 
@@ -40,8 +42,7 @@ class Client:
         await self.__writer.wait_closed()
 
     @staticmethod
-    def __class_factory(data: dict) -> object:
-        class_type = data.get("class").upper()
+    def __class_factory(class_type: str, data: str) -> object:
 
         match class_type:
             case "TPV":
@@ -67,8 +68,8 @@ class Client:
                 raise ValueError(f"Unknown type: {data.get('class')}")
 
     async def recv(self):
-        data = await self.__read()
-        result = self.__class_factory(data)
+        class_type, data = await self.__read()
+        result = self.__class_factory(class_type, data)
         if isinstance(result, Version):
             self._version = result
         if isinstance(result, Devices):
@@ -79,8 +80,7 @@ class Client:
 
     async def watch(self):
         # TODO: Move to schema
-        wd = asdict(self.watch_config)
-        self.__writer.write(WATCH.format(json.dumps(wd)).encode())
+        self.__writer.write(WATCH.format(self.watch_config.to_json()).encode())
         await self.__writer.drain()
 
     async def poll(self):
