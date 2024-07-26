@@ -26,11 +26,12 @@ class Watch:
     device: str = ""
     remote: str = ""
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "Watch":
+    def from_json(data: str) -> "Watch":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Watch.__annotations__}
         return Watch(**filtered_data)
 
@@ -47,11 +48,12 @@ class Version:
     def proto(self) -> tuple[int, int]:
         return self.proto_major, self.proto_minor
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "Version":
+    def from_json(data: str) -> "Version":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Version.__annotations__}
         return Version(**filtered_data)
 
@@ -74,11 +76,12 @@ class Device:
     subtype: str | None = None
     subtype1: str | None = None
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "Device":
+    def from_json(data: str) -> "Device":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Device.__annotations__}
         return Device(**filtered_data)
 
@@ -88,11 +91,12 @@ class Devices:
     devices: list[Device]
     remote: str | None = None
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "Devices":
+    def from_json(data: str) -> "Devices":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Devices.__annotations__}
         return Devices(**filtered_data)
 
@@ -153,11 +157,12 @@ class TPV:
     wspeedt: float | None = None
     wtemp: float | None = None
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "TPV":
+    def from_json(data: str) -> "TPV":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in TPV.__annotations__}
         return TPV(**filtered_data)
 
@@ -177,11 +182,12 @@ class GST:
     vn: float | None = None
     vu: float | None = None
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "GST":
+    def from_json(data: str) -> "GST":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in GST.__annotations__}
         return GST(**filtered_data)
 
@@ -262,11 +268,12 @@ class Sky:
     xdop: float | None = None
     ydop: float | None = None
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(data: dict) -> "Sky":
+    def from_json(data: str) -> "Sky":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Sky.__annotations__}
         return Sky(**filtered_data)
 
@@ -278,8 +285,12 @@ class Poll:
     tpv: list[TPV]
     sky: list[Sky]
 
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
     @staticmethod
-    def from_json(data: dict) -> "Poll":
+    def from_json(data: str) -> "Poll":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Poll.__annotations__}
         return Poll(**filtered_data)
 
@@ -291,11 +302,11 @@ class Error:
     def __str__(self) -> str:
         return self.message
 
-    def json(self) -> str:
+    def to_json(self) -> str:
         return json.dumps(asdict(self))
 
-    # TODO: This accepts a dict, not a str
     @staticmethod
-    def from_json(data: dict) -> "Error":
+    def from_json(data: str) -> "Error":
+        data = json.loads(data)
         filtered_data = {k: v for k, v in data.items() if k in Error.__annotations__}
         return Error(**filtered_data)
