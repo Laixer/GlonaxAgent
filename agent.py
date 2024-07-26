@@ -70,39 +70,45 @@ async def glonax_server():
 
     path = config["glonax"]["unix_socket"]
 
-    try:
-        logger.info(f"Connecting to glonax at {path}")
+    while True:
+        try:
+            logger.info(f"Connecting to glonax at {path}")
 
-        machine_service = MachineService()
-        user_agent = "glonax-agent/1.0"
-        async with await gclient.open_session(path, user_agent=user_agent) as session:
-            logger.info(f"Glonax connected to {path}")
-            logger.info(f"Instance ID: {session.instance.id}")
-            logger.info(f"Instance model: {session.instance.model}")
-            logger.info(f"Instance type: {session.instance.machine_type}")
-            logger.info(f"Instance version: {session.instance.version_string}")
-            logger.info(f"Instance serial number: {session.instance.serial_number}")
+            machine_service = MachineService()
+            user_agent = "glonax-agent/1.0"
+            async with await gclient.open_session(
+                path, user_agent=user_agent
+            ) as session:
+                logger.info(f"Glonax connected to {path}")
+                logger.info(f"Instance ID: {session.instance.id}")
+                logger.info(f"Instance model: {session.instance.model}")
+                logger.info(f"Instance type: {session.instance.machine_type}")
+                logger.info(f"Instance version: {session.instance.version_string}")
+                logger.info(f"Instance serial number: {session.instance.serial_number}")
 
-            INSTANCE = session.instance
-            instance_event.set()
-            machine_service.feed(session.instance)
+                INSTANCE = session.instance
+                instance_event.set()
+                machine_service.feed(session.instance)
 
-            logger.debug("Instance event set")
+                logger.debug("Instance event set")
 
-            with open("instance.dat", "wb") as f:
-                pickle.dump(session.instance, f)
+                with open("instance.dat", "wb") as f:
+                    pickle.dump(session.instance, f)
 
-            async for message in session:
-                machine_service.feed(message)
+                async for message in session:
+                    machine_service.feed(message)
 
-    except asyncio.CancelledError:
-        logger.info("Glonax task cancelled")
-        return
-    except ConnectionError as e:
-        logger.debug(f"Glonax connection error: {e}")
-        logger.error("Glonax is not running")
-    except Exception as e:
-        logger.critical(f"Unknown error: {traceback.format_exc()}")
+        except asyncio.CancelledError:
+            logger.info("Glonax task cancelled")
+            return
+        except ConnectionError as e:
+            logger.debug(f"Glonax connection error: {e}")
+            logger.error("Glonax is not running")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+        logger.info("Reconnecting to glonax...")
+        await asyncio.sleep(1)
 
 
 glonax_peer_connection = None
@@ -557,9 +563,11 @@ async def gps_server():
         except ConnectionError as e:
             logger.debug(f"GPS connection error: {e}")
             logger.error("GPS is not running")
-            await asyncio.sleep(1)
         except Exception as e:
             logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+        logger.info("Reconnecting to GPS...")
+        await asyncio.sleep(1)
 
 
 async def main():
