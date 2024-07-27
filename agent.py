@@ -169,10 +169,7 @@ class GlonaxPeerConnection:
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
             if channel.label == "command":
-                if self.__glonax_session is None:
-                    await self.__start_glonax()
-                if self.__task is None:
-                    assert self.__glonax_session is not None
+                if self.__task is None and self.__glonax_session is None:
                     self.__task = asyncio.create_task(self.__run_glonax_read(channel))
 
             @channel.on("message")
@@ -212,23 +209,31 @@ class GlonaxPeerConnection:
     async def __run_glonax_read(self, channel):
         while True:
             try:
-                frame, message = await self.__glonax_session.reader.read_frame()
-                channel.send(frame.to_bytes() + message)
+                logger.debug("Connecting to glonax at %s", self.__socket_path)
+
+                self.__glonax_session = await gclient.open_session(
+                    self.__socket_path, user_agent=self.__user_agent
+                )
+                await self.__glonax_session.motion_stop_all()
+
+                # TODO: Wrap in frame
+                # channel.send(INSTANCE)
+
+                while True:
+                    frame, message = await self.__glonax_session.reader.read_frame()
+                    channel.send(frame.to_bytes() + message)
 
             except asyncio.CancelledError:
                 logger.info("Glonax task cancelled")
-                break
+                return
             except ConnectionError as e:
-                logger.error(f"Glonax connection error: {e}")
-                await asyncio.sleep(1)
+                logger.debug(f"Glonax connection error: {e}")
+                logger.error("Glonax is not running")
+            except Exception as e:
+                logger.critical(f"Unknown error: {traceback.format_exc()}")
 
-    async def __start_glonax(self) -> None:
-        logger.debug("Open gloanx session to %s", self.__socket_path)
-
-        self.__glonax_session = await gclient.open_session(
-            self.__socket_path, user_agent=self.__user_agent
-        )
-        await self.__glonax_session.motion_stop_all()
+            logger.info("Reconnecting to glonax...")
+            await asyncio.sleep(1)
 
     async def _stop(self) -> None:
         global glonax_peer_connection
@@ -237,9 +242,12 @@ class GlonaxPeerConnection:
 
         if self.__task is not None:
             self.__task.cancel()
+            self.__task = None
         if self.__glonax_session is not None:
             await self.__glonax_session.motion_stop_all()
             await self.__glonax_session.close()
+            self.__glonax_session = None
+
         # TODO: We should not be calling this
         self.__webcam._stop(self.__webcam.video)
         glonax_peer_connection = None
