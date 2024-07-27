@@ -216,8 +216,12 @@ class GlonaxPeerConnection:
                 )
                 await self.__glonax_session.motion_stop_all()
 
-                # TODO: Wrap in frame
-                # channel.send(INSTANCE)
+                instance_bytes = self.__glonax_session.instance.to_bytes()
+                frame = gclient.Frame(
+                    type=gclient.MessageType.INSTANCE,
+                    message_length=len(instance_bytes),
+                )
+                channel.send(frame.to_bytes() + instance_bytes)
 
                 while True:
                     frame, message = await self.__glonax_session.reader.read_frame()
@@ -554,10 +558,11 @@ async def gps_server():
 
     from location import Location, LocationService
 
+    location_service = LocationService()
+
     while True:
         try:
             async with await client.open() as c:
-                location_service = LocationService()
                 async for result in c:
                     if isinstance(result, TPV):
                         l = Location(
@@ -633,9 +638,7 @@ if __name__ == "__main__":
         help="Enable logging to systemd journal",
     )
     parser.add_argument(
-        "--config",
-        default="config.ini",
-        help="Specify the configuration file to use",
+        "--config", default="config.ini", help="Specify the configuration file to use"
     )
     args = parser.parse_args()
 
