@@ -179,7 +179,12 @@ class GlonaxPeerConnection:
             async def on_message(message):
                 if channel.label == "command" and self.__glonax_session is not None:
                     frame = gclient.Frame.from_bytes(message[:10])
-                    await self.__glonax_session.writer.write_frame(frame, message[10:])
+                    if frame.type == gclient.MessageType.ECHO:
+                        channel.send(message)
+                    else:
+                        await self.__glonax_session.writer.write_frame(
+                            frame, message[10:]
+                        )
 
     @property
     def user_agent(self) -> str:
