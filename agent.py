@@ -168,17 +168,17 @@ class GlonaxPeerConnection:
 
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
-            if channel.label == "command":
+            if channel.label == "signal":
                 if self.__task is None and self.__glonax_session is None:
                     self.__task = asyncio.create_task(self.__run_glonax_read(channel))
 
             @channel.on("message")
             async def on_message(message):
-                if channel.label == "command" and self.__glonax_session is not None:
+                if channel.label == "command":
                     frame = gclient.Frame.from_bytes(message[:10])
                     if frame.type == gclient.MessageType.ECHO:
                         channel.send(message)
-                    else:
+                    elif self.__glonax_session is not None:
                         await self.__glonax_session.writer.write_frame(
                             frame, message[10:]
                         )
