@@ -278,10 +278,12 @@ async def setup_rtc(
         raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
 
     peer_connection = GlonaxPeerConnection(path, params)
-    glonax_peer_connection = peer_connection
 
     await peer_connection.set_remote_description(offer)
-    return await peer_connection.create_answer()
+    answer = await peer_connection.create_answer()
+
+    glonax_peer_connection = peer_connection
+    return answer
 
 
 @dispatcher.rpc_call

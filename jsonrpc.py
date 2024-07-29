@@ -190,7 +190,6 @@ async def invoke(
                             result = await callable(**request.params)
                     elif isinstance(request.params, list):
                         if all(isinstance(param, dict) for param in request.params):
-                            print("Params are list of dicts")
                             param_results = map_to_dataclass(request.params, callable)
                             result = await callable(*param_results)
                         else:
