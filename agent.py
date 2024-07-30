@@ -113,6 +113,8 @@ async def glonax_server():
 
 
 glonax_peer_connection = None
+media_video0 = None
+media_relay = MediaRelay()
 
 
 class GlonaxPeerConnection:
@@ -120,37 +122,16 @@ class GlonaxPeerConnection:
     allowed_video_sizes = ["1920x1080", "1280x720", "640x480"]
 
     def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
+        global media_video0, media_relay
+
         self.__socket_path = socket_path
         self.__user_agent = params.user_agent
-
-        self.__video_track = (
-            f"/dev/video{params.video_track}"
-            if params.video_track in self.allowed_video_tracks
-            else "/dev/video0"
-        )
-        video_size = (
-            params.video_size
-            if params.video_size in self.allowed_video_sizes
-            else "640x480"
-        )
-        self.__av_options = {
-            "framerate": "30",
-            "video_size": video_size,
-            "preset": "ultrafast",
-            "tune": "zerolatency",
-        }
 
         self.__peer_connection = RTCPeerConnection()
         self.__glonax_session = None
         self.__task = None
 
-        # TOOD: Throws av.error.OSError: [Errno 16] Device or resource busy: '/dev/video0'
-        self.__webcam = MediaPlayer(
-            self.__video_track, format="v4l2", options=self.__av_options
-        )
-
-        relay = MediaRelay()
-        video = relay.subscribe(self.__webcam.video, buffered=False)
+        video = media_relay.subscribe(media_video0.video, buffered=False)
 
         self.__peer_connection.addTrack(video)
 
@@ -594,7 +575,7 @@ async def gps_server():
 
 
 async def main():
-    global INSTANCE, instance_event
+    global INSTANCE, instance_event, glonax_peer_connection, media_video0
 
     logger.info("Starting agent")
 
@@ -613,10 +594,27 @@ async def main():
                     instance_event.set()
 
                     logger.debug("Instance event set")
+            # TODO: Should be more specific
             except Exception:
                 os.remove("instance.dat")
 
         await remote_address()
+
+        try:
+            logger.info("Opening video device /dev/video0")
+
+            media_video0 = MediaPlayer(
+                "/dev/video0",
+                format="v4l2",
+                options={
+                    "framerate": "30",
+                    "video_size": "1280x720",
+                    "preset": "ultrafast",
+                    "tune": "zerolatency",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error opening video device: {e}")
 
         async with asyncio.TaskGroup() as tg:
             task1 = tg.create_task(glonax_server())
@@ -624,6 +622,11 @@ async def main():
             task3 = tg.create_task(websocket())
             task4 = tg.create_task(http_task_group(tg))
     except asyncio.CancelledError:
+        if glonax_peer_connection is not None:
+            await glonax_peer_connection._stop()
+        if media_video0 is not None:
+            media_video0._stop(media_video0.video)
+            media_video0 = None
         logger.info("Agent is gracefully shutting down")
 
 
