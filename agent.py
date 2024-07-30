@@ -253,8 +253,10 @@ class GlonaxPeerConnection:
             await self.__glonax_session.close()
             self.__glonax_session = None
 
-        # TODO: We should not be calling this
-        self.__webcam._stop(self.__webcam.video)
+        if self.__peer_connection is not None:
+            await self.__peer_connection.close()
+            self.__peer_connection = None
+
         glonax_peer_connection = None
 
 
