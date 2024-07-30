@@ -59,6 +59,7 @@ async def remote_address():
             logger.error(f"HTTP Error: {e}")
         except Exception as e:
             logger.error(f"Unknown error: {e}")
+            os.remove("remote_address.dat")
 
 
 async def glonax_server():
