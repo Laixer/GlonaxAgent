@@ -13,7 +13,7 @@ import asyncio
 import websockets
 from systemd import journal
 from aioice import Candidate
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCPeerConnection, RTCSessionDescription, InvalidStateError
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from log import ColorLogHandler
@@ -211,6 +211,9 @@ class GlonaxPeerConnection:
 
             except asyncio.CancelledError:
                 logger.info("Glonax task cancelled")
+                return
+            except InvalidStateError:
+                logger.debug("Data channel closed")
                 return
             except ConnectionError as e:
                 logger.debug(f"Glonax connection error: {e}")
