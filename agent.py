@@ -262,7 +262,7 @@ async def setup_rtc(
     if glonax_peer_connection is not None:
         raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
 
-    logger.info("Setting up RTC connection")
+    logger.info(f"Setting up RTC connection {params.connection_id}")
 
     peer_connection = GlonaxPeerConnection(path, params)
 
@@ -274,10 +274,15 @@ async def setup_rtc(
 
 
 @dispatcher.rpc_call
-async def update_rtc(params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCandidateParams) -> str:
+async def update_rtc(
+    params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCandidateParams
+) -> str:
     global glonax_peer_connection
 
-    logger.info("Updating RTC connection with ICE candidate")
+    if glonax_peer_connection is None:
+        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
+
+    logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
     sdp = candidate_inc.candidate.replace("candidate:", "")
     candidate = Candidate.from_sdp(sdp)
@@ -285,9 +290,6 @@ async def update_rtc(params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCa
     candidate = candidate_from_aioice(candidate)
     candidate.sdpMid = candidate_inc.sdpMid
     candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
-
-    if glonax_peer_connection is None:
-        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
 
     await glonax_peer_connection.add_ice_candidate(candidate)
 
