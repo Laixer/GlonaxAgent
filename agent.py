@@ -292,8 +292,8 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
     await glonax_peer_connection.add_ice_candidate(candidate)
 
 
-@dispatcher.rpc_disconnect
-async def disconnect_rpc():
+@dispatcher.rpc_call
+async def disconnect_rtc():
     global glonax_peer_connection
 
     logger.info("Disconnecting RPC")
