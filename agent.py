@@ -294,8 +294,13 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
 
 @dispatcher.rpc_disconnect
 async def disconnect_rpc():
+    global glonax_peer_connection
+
+    logger.info("Disconnecting RPC")
+
     if glonax_peer_connection is not None:
         await glonax_peer_connection._stop()
+        glonax_peer_connection = None
 
 
 @dispatcher.rpc_call
