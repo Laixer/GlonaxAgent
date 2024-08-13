@@ -12,7 +12,7 @@ import psutil
 import asyncio
 import websockets
 
-# from systemd import journal
+from systemd import journal
 from aioice import Candidate
 from aiortc import RTCPeerConnection, RTCSessionDescription, InvalidStateError
 from aiortc.contrib.media import MediaPlayer, MediaRelay
@@ -311,8 +311,17 @@ async def update_rtc(
 
 
 @dispatcher.rpc_call
-async def disconnect_rtc():
+async def disconnect_rtc(params: GlonaxPeerConnectionParams):
     global glonax_peer_connection
+
+    if not params.connection_id:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+
+    if glonax_peer_connection is None:
+        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
+
+    if params.connection_id != glonax_peer_connection.connection_id:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
     logger.info("Disconnecting RPC")
 
@@ -687,10 +696,10 @@ if __name__ == "__main__":
     log_level = logging.getLevelName(args.log_level.upper())
     logger.setLevel(log_level)
 
-    # if args.log_systemd:
-    #     logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
-    # else:
-    logger.addHandler(ColorLogHandler())
+    if args.log_systemd:
+        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
+    else:
+        logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
 
