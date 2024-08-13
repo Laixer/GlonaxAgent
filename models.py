@@ -1,11 +1,10 @@
 import datetime
-from pydantic import BaseModel
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
-# TODO: Remove BaseModel, add dataclass
 # TODO: Rename to HostTelemetry
-class Telemetry(BaseModel):
+@dataclass
+class Telemetry:
     memory_used: float
     disk_used: float
     cpu_freq: float
@@ -13,20 +12,25 @@ class Telemetry(BaseModel):
     uptime: int
     created_at: datetime.timedelta | None = None
 
+    def as_dict(self):
+        return asdict(self)
 
-# TODO: Remove BaseModel, add dataclass
-class GpsTelemetry(BaseModel):
+
+@dataclass
+class GpsTelemetry:
     mode: int
     lat: float | None = None
     lon: float | None = None
     alt: float | None = None
     speed: float | None = None
 
+    def as_dict(self):
+        return asdict(self)
 
-# TODO: Remove BaseModel, add dataclass
-class HostConfig(BaseModel):
+
+@dataclass
+class HostConfig:
     # instance: UUID # TODO: Add this field
-    name: str | None = None
     hostname: str
     kernel: str
     memory_total: int
@@ -34,6 +38,10 @@ class HostConfig(BaseModel):
     model: str
     version: str
     serial_number: str
+    name: str | None = None
+
+    def as_dict(self):
+        return asdict(self)
 
 
 @dataclass

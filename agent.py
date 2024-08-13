@@ -434,9 +434,10 @@ async def update_telemetry(client: httpx.AsyncClient):
             await asyncio.sleep(15)
 
             telemetry = HostService.get_telemetry()
-            data = telemetry.model_dump()
 
-            response = await client.post(f"/{INSTANCE.id}/telemetry", json=data)
+            response = await client.post(
+                f"/{INSTANCE.id}/telemetry", json=telemetry.as_dict()
+            )
             response.raise_for_status()
 
             await asyncio.sleep(45)
@@ -472,10 +473,11 @@ async def update_host(client: httpx.AsyncClient):
                 version=INSTANCE.version_string,
                 serial_number=INSTANCE.serial_number,
             )
-            data = host_config.model_dump()
 
             if random.randint(1, 25) == 1:
-                response = await client.put(f"/{INSTANCE.id}/host", json=data)
+                response = await client.put(
+                    f"/{INSTANCE.id}/host", json=host_config.as_dict()
+                )
                 response.raise_for_status()
 
             await asyncio.sleep(45)
