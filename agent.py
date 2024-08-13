@@ -292,6 +292,12 @@ async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
     await glonax_peer_connection.add_ice_candidate(candidate)
 
 
+@dispatcher.rpc_disconnect
+async def disconnect_rpc():
+    if glonax_peer_connection is not None:
+        await glonax_peer_connection._stop()
+
+
 @dispatcher.rpc_call
 async def reboot():
     if await System.is_sudo():
