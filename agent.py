@@ -274,7 +274,7 @@ async def setup_rtc(
 
 
 @dispatcher.rpc_call
-async def update_rtc(candidate_inc: RTCIceCandidateParams) -> str:
+async def update_rtc(params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCandidateParams) -> str:
     global glonax_peer_connection
 
     logger.info("Updating RTC connection with ICE candidate")
