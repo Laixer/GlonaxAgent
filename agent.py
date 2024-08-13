@@ -259,10 +259,10 @@ async def setup_rtc(
     if offer.type != "offer":
         raise jsonrpc.JSONRPCRuntimeError("Invalid offer type")
 
-    logger.info("Setting up RTC connection")
-
     if glonax_peer_connection is not None:
         raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
+
+    logger.info("Setting up RTC connection")
 
     peer_connection = GlonaxPeerConnection(path, params)
 
