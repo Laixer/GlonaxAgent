@@ -11,7 +11,8 @@ import httpx
 import psutil
 import asyncio
 import websockets
-from systemd import journal
+
+# from systemd import journal
 from aioice import Candidate
 from aiortc import RTCPeerConnection, RTCSessionDescription, InvalidStateError
 from aiortc.contrib.media import MediaPlayer, MediaRelay
@@ -124,6 +125,8 @@ class GlonaxPeerConnection:
     def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
         global media_video0, media_relay
 
+        self._connection_id = params.connection_id
+
         self.__socket_path = socket_path
         self.__user_agent = params.user_agent
 
@@ -164,6 +167,10 @@ class GlonaxPeerConnection:
                         await self.__glonax_session.writer.write_frame(
                             frame, message[10:]
                         )
+
+    @property
+    def connection_id(self) -> int:
+        return self._connection_id
 
     @property
     def user_agent(self) -> str:
@@ -287,6 +294,9 @@ async def update_rtc(
 
     if glonax_peer_connection is None:
         raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
+
+    if params.connection_id != glonax_peer_connection.connection_id:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
     logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
@@ -677,10 +687,10 @@ if __name__ == "__main__":
     log_level = logging.getLevelName(args.log_level.upper())
     logger.setLevel(log_level)
 
-    if args.log_systemd:
-        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
-    else:
-        logger.addHandler(ColorLogHandler())
+    # if args.log_systemd:
+    #     logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
+    # else:
+    logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
 
