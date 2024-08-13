@@ -256,6 +256,9 @@ async def setup_rtc(
 
     path = config["glonax"]["unix_socket"]
 
+    if not params.connection_id:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+
     if offer.type != "offer":
         raise jsonrpc.JSONRPCRuntimeError("Invalid offer type")
 
@@ -278,6 +281,9 @@ async def update_rtc(
     params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCandidateParams
 ) -> str:
     global glonax_peer_connection
+
+    if not params.connection_id:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
     if glonax_peer_connection is None:
         raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
