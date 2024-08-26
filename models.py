@@ -2,15 +2,21 @@ import datetime
 from dataclasses import asdict, dataclass
 
 
-# TODO: Rename to HostTelemetry
 @dataclass
-class Telemetry:
+class HostTelemetry:
+    instance: str
+    hostname: str
+    kernel: str
+    model: str
+    version: str
+    serial_number: str
     memory_used: float
+    memory_total: int
     disk_used: float
     cpu_freq: float
     cpu_load: tuple[float, float, float]
+    cpu_count: int
     uptime: int
-    created_at: datetime.timedelta | None = None
 
     def as_dict(self):
         return asdict(self)
@@ -23,22 +29,6 @@ class GpsTelemetry:
     lon: float | None = None
     alt: float | None = None
     speed: float | None = None
-
-    def as_dict(self):
-        return asdict(self)
-
-
-@dataclass
-class HostConfig:
-    # instance: UUID # TODO: Add this field
-    hostname: str
-    kernel: str
-    memory_total: int
-    cpu_count: int
-    model: str
-    version: str
-    serial_number: str
-    name: str | None = None
 
     def as_dict(self):
         return asdict(self)

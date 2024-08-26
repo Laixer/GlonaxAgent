@@ -19,7 +19,7 @@ from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from log import ColorLogHandler
 from glonax import client as gclient
-from models import GpsTelemetry, HostConfig, GlonaxPeerConnectionParams, RTCIceCandidateParams
+from models import GpsTelemetry, GlonaxPeerConnectionParams, RTCIceCandidateParams
 from system import System
 from aiortc import (
     RTCPeerConnection,
@@ -452,7 +452,7 @@ async def update_telemetry(client: httpx.AsyncClient):
         try:
             await asyncio.sleep(15)
 
-            telemetry = HostService.get_telemetry()
+            telemetry = HostService.get_telemetry(INSTANCE)
 
             response = await client.post(f"/telemetry_host", json=telemetry.as_dict())
             response.raise_for_status()
@@ -469,45 +469,6 @@ async def update_telemetry(client: httpx.AsyncClient):
             logger.error(f"HTTP Error: {e}")
         except Exception as e:
             logger.critical(f"Unknown error: {traceback.format_exc()}")
-
-
-# async def update_host(client: httpx.AsyncClient):
-#     global INSTANCE
-
-#     logger.info("Starting host update task")
-
-#     while True:
-#         try:
-#             await asyncio.sleep(15)
-
-#             # TODO: Retrieve from HostService
-#             host_config = HostConfig(
-#                 hostname=os.uname().nodename,
-#                 kernel=os.uname().release,
-#                 memory_total=psutil.virtual_memory().total,
-#                 cpu_count=psutil.cpu_count(),
-#                 model=INSTANCE.model,
-#                 version=INSTANCE.version_string,
-#                 serial_number=INSTANCE.serial_number,
-#             )
-
-#             if random.randint(1, 25) == 1:
-#                 response = await client.post(f"/telemetry_host", json=host_config.as_dict())
-#                 response.raise_for_status()
-
-#             await asyncio.sleep(45)
-
-#         except asyncio.CancelledError:
-#             break
-#         except (
-#             httpx.HTTPStatusError,
-#             httpx.ConnectTimeout,
-#             httpx.ConnectError,
-#         ) as e:
-#             logger.error(f"HTTP Error: {e}")
-#         except Exception as e:
-#             logger.critical(f"Unknown error: {traceback.format_exc()}")
-
 
 async def update_gnss(client: httpx.AsyncClient):
     from location import LocationService
@@ -568,7 +529,6 @@ async def http_task_group(tg: asyncio.TaskGroup):
         http2=True, base_url=base_url, headers=headers
     ) as client:
         tg.create_task(update_telemetry(client))
-        # tg.create_task(update_host(client))
         tg.create_task(update_gnss(client))
 
         try:
