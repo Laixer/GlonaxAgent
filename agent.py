@@ -602,14 +602,17 @@ async def main():
         await remote_address()
 
         try:
-            logger.info("Opening video device /dev/video0")
+            camera0 = config["camera0"]
+            device = camera0["device"]
+
+            logger.info(f"Opening video device {device}")
 
             media_video0 = MediaPlayer(
-                "/dev/video0",
+                device,
                 format="v4l2",
                 options={
-                    "framerate": "30",
-                    "video_size": "1280x720",
+                    "framerate": camera0.get("frame_rate", "30"),
+                    "video_size": camera0.get("video_size", "640x480"),
                     "preset": "ultrafast",
                     "tune": "zerolatency",
                 },
