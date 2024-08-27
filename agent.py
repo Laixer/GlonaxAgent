@@ -24,6 +24,7 @@ from aiortc import (
     RTCSessionDescription,
     RTCIceCandidate,
 )
+from management import ManagementService
 from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
@@ -37,30 +38,7 @@ INSTANCE: gclient.Instance | None = None
 
 instance_event = asyncio.Event()
 
-
-async def remote_address():
-    auth_token = config["telemetry"]["token"]
-    headers = {"Authorization": "Basic " + auth_token}
-
-    try:
-        base_url = config["telemetry"]["base_url"]
-        async with httpx.AsyncClient(
-            http2=True, base_url=base_url, headers=headers
-        ) as client:
-            response = await client.get("/ip")
-            response.raise_for_status()
-
-            response_data = response.json()
-            logger.info(f"Remote address: {response_data['ip']}")
-
-    except (
-        httpx.HTTPStatusError,
-        httpx.ConnectTimeout,
-        httpx.ConnectError,
-    ) as e:
-        logger.error(f"HTTP Error: {e}")
-    except Exception as e:
-        logger.error(f"Unknown error: {e}")
+management_service: ManagementService | None = None
 
 
 async def glonax_server():
@@ -584,6 +562,8 @@ async def gps_server():
 
 
 async def ping_server():
+    global management_service
+
     host = config["ping"]["host"]
 
     while True:
@@ -608,22 +588,11 @@ async def ping_server():
                     logger.warning(f"High network latency: {latency} ms")
 
                     # TODO: Fire event
-                    auth_token = config["telemetry"]["token"]
-                    headers = {"Authorization": "Basic " + auth_token}
-
-                    base_url = config["telemetry"]["base_url"]
-                    async with httpx.AsyncClient(
-                        http2=True, base_url=base_url, headers=headers
-                    ) as client:
-                        await client.post(
-                            "/notify",
-                            json={
-                                "topic": "NET.LATENCY",
-                                "message": "High network latency",
-                                "latency": latency,
-                                "instance": str(INSTANCE.id),
-                            },
-                        )
+                    await management_service.notify(
+                        "NET.LATENCY",
+                        f"High network latency: {latency} ms",
+                        latency=latency,
+                    )
             else:
                 logger.error(f"Error pinging {host}: {stderr.decode()}")
 
@@ -637,7 +606,7 @@ async def ping_server():
 
 
 async def main():
-    global INSTANCE, instance_event, glonax_peer_connection, media_video0
+    global INSTANCE, management_service, instance_event, glonax_peer_connection, media_video0
 
     logger.info("Starting agent")
 
@@ -660,24 +629,20 @@ async def main():
             except Exception:
                 os.remove("instance.dat")
 
-            # Fire boot event
-            auth_token = config["telemetry"]["token"]
-            headers = {"Authorization": "Basic " + auth_token}
+        assert INSTANCE is not None
 
-            base_url = config["telemetry"]["base_url"]
-            async with httpx.AsyncClient(
-                http2=True, base_url=base_url, headers=headers
-            ) as client:
-                await client.post(
-                    "/notify",
-                    json={
-                        "topic": "AGENT.START",
-                        "message": f"Agent {INSTANCE.id} started",
-                        "instance": str(INSTANCE.id),
-                    },
-                )
+        management_service = ManagementService(
+            config["telemetry"]["base_url"],
+            config["telemetry"]["token"],
+            INSTANCE.id,
+        )
 
-        await remote_address()
+        # TODO: Fire boot event
+        await management_service.notify("AGENT.START", f"Agent {INSTANCE.id} started")
+
+        # TODO: Add remote address to network service
+        ip = await management_service.remote_ip()
+        logger.info(f"Remote address: {ip}")
 
         try:
             camera0 = config["camera0"]
@@ -712,22 +677,10 @@ async def main():
             media_video0._stop(media_video0.video)
             media_video0 = None
 
-        # Fire shutdown event
-        auth_token = config["telemetry"]["token"]
-        headers = {"Authorization": "Basic " + auth_token}
-
-        base_url = config["telemetry"]["base_url"]
-        async with httpx.AsyncClient(
-            http2=True, base_url=base_url, headers=headers
-        ) as client:
-            await client.post(
-                "/notify",
-                json={
-                    "topic": "AGENT.SHUTDOWN",
-                    "message": f"Agent {INSTANCE.id} shutting down",
-                    "instance": str(INSTANCE.id),
-                },
-            )
+        # TODO: Fire shutdown event
+        await management_service.notify(
+            "AGENT.SHUTDOWN", f"Agent {INSTANCE.id} shutting down"
+        )
 
         logger.info("Agent is gracefully shutting down")
 
