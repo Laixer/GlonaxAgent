@@ -423,37 +423,25 @@ async def websocket():
         await asyncio.sleep(1)
 
 
-async def update_telemetry(client: httpx.AsyncClient):
-    global INSTANCE
+async def update_telemetry():
+    global INSTANCE, management_service
 
     from host import HostService
 
     logger.info("Starting telemetry update task")
 
     while True:
-        try:
-            await asyncio.sleep(15)
+        await asyncio.sleep(15)
 
-            telemetry = HostService.get_telemetry(INSTANCE)
+        telemetry = HostService.get_telemetry(INSTANCE)
+        await management_service.update_host_telemetry(telemetry)
 
-            response = await client.post(f"/telemetry_host", json=telemetry.as_dict())
-            response.raise_for_status()
-
-            await asyncio.sleep(45)
-
-        except asyncio.CancelledError:
-            break
-        except (
-            httpx.HTTPStatusError,
-            httpx.ConnectTimeout,
-            httpx.ConnectError,
-        ) as e:
-            logger.error(f"HTTP Error: {e}")
-        except Exception as e:
-            logger.critical(f"Unknown error: {traceback.format_exc()}")
+        await asyncio.sleep(45)
 
 
-async def update_gnss(client: httpx.AsyncClient):
+async def update_gnss():
+    global INSTANCE, management_service
+
     from location import LocationService
 
     logger.info("Starting GNSS update task")
@@ -461,41 +449,25 @@ async def update_gnss(client: httpx.AsyncClient):
     location_service = LocationService()
 
     while True:
-        try:
-            await asyncio.sleep(20)
+        await asyncio.sleep(20)
 
-            location = location_service.last_location()
-            if location is not None:
-                logger.info(
-                    f"Location: {location.latitude}, {location.longitude}, {location.altitude}, {location.speed}, {location.heading}"
-                )
+        location = location_service.last_location()
+        if location is not None:
+            logger.info(
+                f"Location: {location.latitude}, {location.longitude}, {location.altitude}, {location.speed}, {location.heading}"
+            )
 
-                gps_telemetry = GpsTelemetry(
-                    instance=str(INSTANCE.id),
-                    mode=location.fix,
-                    lat=location.latitude,
-                    lon=location.longitude,
-                    alt=location.altitude,
-                    speed=location.speed,
-                )
+            gps_telemetry = GpsTelemetry(
+                instance=str(INSTANCE.id),
+                mode=location.fix,
+                lat=location.latitude,
+                lon=location.longitude,
+                alt=location.altitude,
+                speed=location.speed,
+            )
+            await management_service.update_gps_telemetry(gps_telemetry)
 
-                response = await client.post(
-                    f"/telemetry_gps", json=gps_telemetry.as_dict()
-                )
-                response.raise_for_status()
-
-            await asyncio.sleep(40)
-
-        except asyncio.CancelledError:
-            break
-        except (
-            httpx.HTTPStatusError,
-            httpx.ConnectTimeout,
-            httpx.ConnectError,
-        ) as e:
-            logger.error(f"HTTP Error: {e}")
-        except Exception as e:
-            logger.critical(f"Unknown error: {traceback.format_exc()}")
+        await asyncio.sleep(40)
 
 
 async def http_task_group(tg: asyncio.TaskGroup):
@@ -507,22 +479,14 @@ async def http_task_group(tg: asyncio.TaskGroup):
 
     logger.info("Starting GNSS update task")
 
-    auth_token = config["telemetry"]["token"]
-    headers = {"Authorization": "Basic " + auth_token}
+    tg.create_task(update_telemetry())
+    tg.create_task(update_gnss())
 
-    base_url = config["telemetry"]["base_url"]
-    async with httpx.AsyncClient(
-        http2=True, base_url=base_url, headers=headers
-    ) as client:
-        tg.create_task(update_telemetry(client))
-        tg.create_task(update_gnss(client))
-
-        try:
-            while True:
-                await asyncio.sleep(3600)
-        except asyncio.CancelledError:
-            logger.info("HTTP task group cancelled")
-            return
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        logger.info("HTTP task group cancelled")
 
 
 async def gps_server():
@@ -583,6 +547,8 @@ async def ping_server():
                 time_str = stdout.decode().split("time=")[1].split(" ms")[0]
                 latency = float(time_str)
                 logger.debug(f"Network latency is {latency} ms")
+
+                # TODO: Feed latency to network service
 
                 if latency > 100:
                     logger.warning(f"High network latency: {latency} ms")

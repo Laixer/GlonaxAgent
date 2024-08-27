@@ -1,6 +1,9 @@
 import httpx
 import logging
+import traceback
 from uuid import UUID
+
+from models import GpsTelemetry, HostTelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +23,12 @@ class ManagementService:
 
     async def notify(self, topic: str, message: str):
         try:
-            await self._client.post(
+            response = await self._client.post(
                 "/notify",
                 json={"topic": topic, "message": message},
             )
+            response.raise_for_status()
+
         except (
             httpx.HTTPStatusError,
             httpx.ConnectTimeout,
@@ -31,7 +36,7 @@ class ManagementService:
         ) as e:
             logger.error(f"HTTP Error: {e}")
         except Exception as e:
-            logger.error(f"Unknown error: {e}")
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
 
     async def remote_ip(self) -> str | None:
         try:
@@ -48,4 +53,36 @@ class ManagementService:
         ) as e:
             logger.error(f"HTTP Error: {e}")
         except Exception as e:
-            logger.error(f"Unknown error: {e}")
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+    async def update_host_telemetry(self, telemetry: HostTelemetry):
+        try:
+            response = await self._client.post(
+                "/telemetry_host", json=telemetry.as_dict()
+            )
+            response.raise_for_status()
+
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+    async def update_gps_telemetry(self, telemetry: GpsTelemetry):
+        try:
+            response = await self._client.post(
+                "/telemetry_gps", json=telemetry.as_dict()
+            )
+            response.raise_for_status()
+
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+        ) as e:
+            logger.error(f"HTTP Error: {e}")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
