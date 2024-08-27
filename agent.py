@@ -359,6 +359,7 @@ def echo(input):
     return input
 
 
+# TODO; Not a RPC call
 @dispatcher.rpc_call
 def glonax_instance() -> gclient.Instance:
     from machine import MachineService
@@ -368,6 +369,7 @@ def glonax_instance() -> gclient.Instance:
     return machine_service.instance
 
 
+# TODO; Not a RPC call
 @dispatcher.rpc_call
 def glonax_engine() -> gclient.Engine | None:
     from machine import MachineService
@@ -376,6 +378,7 @@ def glonax_engine() -> gclient.Engine | None:
     return machine_service.last_engine
 
 
+# TODO; Not a RPC call
 @dispatcher.rpc_call
 def glonax_motion() -> gclient.Motion | None:
     from machine import MachineService
@@ -384,6 +387,7 @@ def glonax_motion() -> gclient.Motion | None:
     return machine_service.last_motion
 
 
+# TODO; Not a RPC call
 @dispatcher.rpc_call
 def glonax_module_status(module: str) -> gclient.ModuleStatus | None:
     from machine import MachineService
@@ -596,6 +600,24 @@ async def ping_server():
 
                 if latency > 100:
                     logger.warning(f"High network latency: {latency} ms")
+
+                    # TODO: Fire event
+                    auth_token = config["telemetry"]["token"]
+                    headers = {"Authorization": "Basic " + auth_token}
+
+                    base_url = config["telemetry"]["base_url"]
+                    async with httpx.AsyncClient(
+                        http2=True, base_url=base_url, headers=headers
+                    ) as client:
+                        await client.post(
+                            "/notify",
+                            json={
+                                "topic": "NET.LATENCY",
+                                "message": "High network latency",
+                                "latency": latency,
+                                "instance": str(INSTANCE.id),
+                            },
+                        )
             else:
                 logger.error(f"Error pinging {host}: {stderr.decode()}")
 
@@ -632,6 +654,23 @@ async def main():
             except Exception:
                 os.remove("instance.dat")
 
+            # Fire boot event
+            auth_token = config["telemetry"]["token"]
+            headers = {"Authorization": "Basic " + auth_token}
+
+            base_url = config["telemetry"]["base_url"]
+            async with httpx.AsyncClient(
+                http2=True, base_url=base_url, headers=headers
+            ) as client:
+                await client.post(
+                    "/notify",
+                    json={
+                        "topic": "AGENT.START",
+                        "message": f"Agent {INSTANCE.id} started",
+                        "instance": str(INSTANCE.id),
+                    },
+                )
+
         await remote_address()
 
         try:
@@ -659,12 +698,31 @@ async def main():
             task3 = tg.create_task(gps_server())
             task4 = tg.create_task(websocket())
             task5 = tg.create_task(http_task_group(tg))
+
     except asyncio.CancelledError:
         if glonax_peer_connection is not None:
             await glonax_peer_connection._stop()
         if media_video0 is not None:
             media_video0._stop(media_video0.video)
             media_video0 = None
+
+        # Fire shutdown event
+        auth_token = config["telemetry"]["token"]
+        headers = {"Authorization": "Basic " + auth_token}
+
+        base_url = config["telemetry"]["base_url"]
+        async with httpx.AsyncClient(
+            http2=True, base_url=base_url, headers=headers
+        ) as client:
+            await client.post(
+                "/notify",
+                json={
+                    "topic": "AGENT.SHUTDOWN",
+                    "message": f"Agent {INSTANCE.id} shutting down",
+                    "instance": str(INSTANCE.id),
+                },
+            )
+
         logger.info("Agent is gracefully shutting down")
 
 
@@ -699,6 +757,3 @@ if __name__ == "__main__":
     config.read(args.config)
 
     asyncio.run(main())
-
-# TODO:
-# - Split agent into separate app
