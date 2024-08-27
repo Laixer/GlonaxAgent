@@ -464,6 +464,7 @@ async def update_telemetry(client: httpx.AsyncClient):
         except Exception as e:
             logger.critical(f"Unknown error: {traceback.format_exc()}")
 
+
 async def update_gnss(client: httpx.AsyncClient):
     from location import LocationService
 
@@ -490,7 +491,9 @@ async def update_gnss(client: httpx.AsyncClient):
                     speed=location.speed,
                 )
 
-                response = await client.post(f"/telemetry_gps", json=gps_telemetry.as_dict())
+                response = await client.post(
+                    f"/telemetry_gps", json=gps_telemetry.as_dict()
+                )
                 response.raise_for_status()
 
             await asyncio.sleep(40)
@@ -570,6 +573,41 @@ async def gps_server():
         await asyncio.sleep(1)
 
 
+async def ping_server():
+    host = config["ping"]["host"]
+
+    while True:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "ping",
+                "-c",
+                "1",
+                host,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            stdout, stderr = await process.communicate()
+
+            if process.returncode == 0:
+                time_str = stdout.decode().split("time=")[1].split(" ms")[0]
+                latency = float(time_str)
+                logger.debug(f"Network latency is {latency} ms")
+
+                if latency > 100:
+                    logger.warning(f"High network latency: {latency} ms")
+            else:
+                logger.error(f"Error pinging {host}: {stderr.decode()}")
+
+        except asyncio.CancelledError:
+            logger.info("Ping handler cancelled")
+            return
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+        await asyncio.sleep(4)
+
+
 async def main():
     global INSTANCE, instance_event, glonax_peer_connection, media_video0
 
@@ -617,9 +655,10 @@ async def main():
 
         async with asyncio.TaskGroup() as tg:
             task1 = tg.create_task(glonax_server())
-            task2 = tg.create_task(gps_server())
-            task3 = tg.create_task(websocket())
-            task4 = tg.create_task(http_task_group(tg))
+            task2 = tg.create_task(ping_server())
+            task3 = tg.create_task(gps_server())
+            task4 = tg.create_task(websocket())
+            task5 = tg.create_task(http_task_group(tg))
     except asyncio.CancelledError:
         if glonax_peer_connection is not None:
             await glonax_peer_connection._stop()
