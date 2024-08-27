@@ -133,7 +133,10 @@ class JSONRPCInternalError(JSONRPCError):
 
 
 async def invoke(
-    callables: set[Callable], input: str | dict | list, prefix: str = "rpc_"
+    callables: set[Callable],
+    input: str | dict | list,
+    prefix: str = "rpc_",
+    auth_callback: Callable = None,
 ) -> JSONRPCResponse | JSONRPCError | None:
     """
     Invokes the appropriate callable function based on the JSON-RPC request.
@@ -142,6 +145,7 @@ async def invoke(
         callables (set[Callable]): A set of callable functions to be invoked.
         input (str | dict | list): The JSON-RPC request input.
         prefix (str, optional): The prefix to be added to the method name when matching callable functions. Defaults to "rpc_".
+        auth_callback (Callable, optional): The authentication callback function. Defaults to None.
 
     Returns:
         JSONRPCResponse | JSONRPCError | None: The JSON-RPC response or error, or None if the request has no id.
@@ -162,6 +166,10 @@ async def invoke(
             or data["jsonrpc"] != "2.0"
         ):
             return JSONRPCInvalidRequest(data.get("id", None))
+
+        if "auth" in data and auth_callback:
+            if not auth_callback(data["auth"]):
+                return JSONRPCError(data.get("id", None), 32000, "Unauthorized")
 
         def map_to_dataclass(params: list[dict], callable: Callable) -> list:
             type_hints = get_type_hints(callable)
