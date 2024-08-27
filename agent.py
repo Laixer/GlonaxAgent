@@ -3,12 +3,10 @@
 import os
 import pickle
 import logging
-import random
 import configparser
 import argparse
 import traceback
 import httpx
-import psutil
 import asyncio
 import websockets
 
@@ -49,9 +47,6 @@ async def remote_address():
 
             logger.info(f"Remote address: {response_data['ip']}")
 
-            with open("remote_address.dat", "w") as f:
-                f.write(response_data["ip"])
-
         except (
             httpx.HTTPStatusError,
             httpx.ConnectTimeout,
@@ -60,7 +55,6 @@ async def remote_address():
             logger.error(f"HTTP Error: {e}")
         except Exception as e:
             logger.error(f"Unknown error: {e}")
-            os.remove("remote_address.dat")
 
 
 async def glonax_server():
@@ -529,7 +523,7 @@ async def http_task_group(tg: asyncio.TaskGroup):
         http2=True, base_url=base_url, headers=headers
     ) as client:
         tg.create_task(update_telemetry(client))
-        tg.create_task(update_gnss(client))
+        # tg.create_task(update_gnss(client))
 
         try:
             while True:
@@ -665,3 +659,6 @@ if __name__ == "__main__":
     config.read(args.config)
 
     asyncio.run(main())
+
+# TODO:
+# - Split agent into separate app

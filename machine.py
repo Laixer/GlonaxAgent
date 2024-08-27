@@ -31,16 +31,16 @@ class MachineService:
         if isinstance(message, Engine):
             if self._engine is None or self._engine != message:
                 self._engine = message
-                logger.info(f"Engine changed: {message}")
+                logger.debug(f"Engine changed: {message}")
         elif isinstance(message, ModuleStatus):
             last_module_status = self.module_status.get(message.name)
             if last_module_status is None or last_module_status != message:
                 self.module_status[message.name] = message
-                logger.info(f"Module status changed: {message}")
+                logger.debug(f"Module status changed: {message}")
         elif isinstance(message, Motion):
             if self._motion is None or self._motion != message:
                 self._motion = message
-                logger.info(f"Motion changed: {message}")
+                logger.debug(f"Motion changed: {message}")
         self.timestamp = time.time()
 
     @property
