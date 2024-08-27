@@ -749,7 +749,10 @@ if __name__ == "__main__":
         help="Enable logging to systemd journal",
     )
     parser.add_argument(
-        "--config", default="config.ini", help="Specify the configuration file to use"
+        "-c",
+        "--config",
+        default="config.ini",
+        help="Specify the configuration file to use",
     )
     args = parser.parse_args()
 
