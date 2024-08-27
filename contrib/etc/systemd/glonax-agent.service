@@ -12,6 +12,7 @@ ExecStart=/bin/bash -c 'source /home/eve/glonax_agent/.venv/bin/activate && pyth
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+KillSignal=SIGINT
 
 [Install]
 WantedBy=multi-user.target
