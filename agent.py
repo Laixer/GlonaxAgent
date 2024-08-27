@@ -39,22 +39,28 @@ instance_event = asyncio.Event()
 
 
 async def remote_address():
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get("https://api.ipify.org?format=json")
-            response.raise_for_status()
-            response_data = response.json()
+    auth_token = config["telemetry"]["token"]
+    headers = {"Authorization": "Basic " + auth_token}
 
+    try:
+        base_url = config["telemetry"]["base_url"]
+        async with httpx.AsyncClient(
+            http2=True, base_url=base_url, headers=headers
+        ) as client:
+            response = await client.get("/ip")
+            response.raise_for_status()
+
+            response_data = response.json()
             logger.info(f"Remote address: {response_data['ip']}")
 
-        except (
-            httpx.HTTPStatusError,
-            httpx.ConnectTimeout,
-            httpx.ConnectError,
-        ) as e:
-            logger.error(f"HTTP Error: {e}")
-        except Exception as e:
-            logger.error(f"Unknown error: {e}")
+    except (
+        httpx.HTTPStatusError,
+        httpx.ConnectTimeout,
+        httpx.ConnectError,
+    ) as e:
+        logger.error(f"HTTP Error: {e}")
+    except Exception as e:
+        logger.error(f"Unknown error: {e}")
 
 
 async def glonax_server():
@@ -731,6 +737,7 @@ if __name__ == "__main__":
         description="Glonax agent for the Laixer Edge platform"
     )
     parser.add_argument(
+        "-l",
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
