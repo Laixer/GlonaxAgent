@@ -482,6 +482,7 @@ async def update_gnss(client: httpx.AsyncClient):
                 )
 
                 gps_telemetry = GpsTelemetry(
+                    instance=str(INSTANCE.id),
                     mode=location.fix,
                     lat=location.latitude,
                     lon=location.longitude,
@@ -523,7 +524,7 @@ async def http_task_group(tg: asyncio.TaskGroup):
         http2=True, base_url=base_url, headers=headers
     ) as client:
         tg.create_task(update_telemetry(client))
-        # tg.create_task(update_gnss(client))
+        tg.create_task(update_gnss(client))
 
         try:
             while True:

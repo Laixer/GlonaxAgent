@@ -24,6 +24,7 @@ class HostTelemetry:
 
 @dataclass
 class GpsTelemetry:
+    instance: str
     mode: int
     lat: float | None = None
     lon: float | None = None
