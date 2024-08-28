@@ -126,3 +126,28 @@ class System:
         except Exception as e:
             logger.error(f"Error during apt {action}: {e}")
             return False
+
+    @staticmethod
+    async def ping(host: str) -> float | None:
+        try:
+            apt_process = await asyncio.create_subprocess_exec(
+                "ping",
+                "-c",
+                "1",
+                host,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            stdout, stderr = await apt_process.communicate()
+
+            if apt_process.returncode == 0:
+                time_str = stdout.decode().split("time=")[1].split(" ms")[0]
+                return float(time_str)
+            else:
+                logger.error(f"Error during ping {stderr.decode().strip()}")
+                return
+
+        except Exception as e:
+            logger.error(f"Error during ping: {e}")
+            return False
