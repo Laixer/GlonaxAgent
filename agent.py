@@ -41,56 +41,6 @@ instance_event = asyncio.Event()
 management_service: ManagementService | None = None
 
 
-async def glonax_server():
-    global INSTANCE, instance_event
-
-    from machine import MachineService
-
-    logger.info("Starting glonax task")
-
-    path = config["glonax"]["unix_socket"]
-
-    while True:
-        try:
-            logger.info(f"Connecting to glonax at {path}")
-
-            machine_service = MachineService()
-            user_agent = "glonax-agent/1.0"
-            async with await gclient.open_session(
-                path, user_agent=user_agent
-            ) as session:
-                logger.info(f"Glonax connected to {path}")
-                logger.info(f"Instance ID: {session.instance.id}")
-                logger.info(f"Instance model: {session.instance.model}")
-                logger.info(f"Instance type: {session.instance.machine_type}")
-                logger.info(f"Instance version: {session.instance.version_string}")
-                logger.info(f"Instance serial number: {session.instance.serial_number}")
-
-                INSTANCE = session.instance
-                instance_event.set()
-                machine_service.feed(session.instance)
-
-                logger.debug("Instance event set")
-
-                with open("instance.dat", "wb") as f:
-                    pickle.dump(session.instance, f)
-
-                async for message in session:
-                    machine_service.feed(message)
-
-        except asyncio.CancelledError:
-            logger.info("Glonax task cancelled")
-            return
-        except ConnectionError as e:
-            logger.debug(f"Glonax connection error: {e}")
-            logger.error("Glonax is not running")
-        except Exception as e:
-            logger.critical(f"Unknown error: {traceback.format_exc()}")
-
-        logger.info("Reconnecting to glonax...")
-        await asyncio.sleep(1)
-
-
 glonax_peer_connection = None
 media_video0 = None
 media_relay = MediaRelay()
@@ -343,43 +293,6 @@ def echo(input):
     return input
 
 
-# TODO; Not a RPC call
-@dispatcher.rpc_call
-def glonax_instance() -> gclient.Instance:
-    from machine import MachineService
-
-    # TODO: Object of type UUID is not JSON serializable
-    machine_service = MachineService()
-    return machine_service.instance
-
-
-# TODO; Not a RPC call
-@dispatcher.rpc_call
-def glonax_engine() -> gclient.Engine | None:
-    from machine import MachineService
-
-    machine_service = MachineService()
-    return machine_service.last_engine
-
-
-# TODO; Not a RPC call
-@dispatcher.rpc_call
-def glonax_motion() -> gclient.Motion | None:
-    from machine import MachineService
-
-    machine_service = MachineService()
-    return machine_service.last_motion
-
-
-# TODO; Not a RPC call
-@dispatcher.rpc_call
-def glonax_module_status(module: str) -> gclient.ModuleStatus | None:
-    from machine import MachineService
-
-    machine_service = MachineService()
-    return machine_service.last_module_status(module)
-
-
 async def websocket():
     global INSTANCE, instance_event
 
@@ -569,6 +482,56 @@ async def ping_server():
             logger.critical(f"Unknown error: {traceback.format_exc()}")
 
         await asyncio.sleep(4)
+
+
+async def glonax_server():
+    global INSTANCE, instance_event
+
+    from machine import MachineService
+
+    logger.info("Starting glonax task")
+
+    path = config["glonax"]["unix_socket"]
+
+    while True:
+        try:
+            logger.info(f"Connecting to glonax at {path}")
+
+            machine_service = MachineService()
+            user_agent = "glonax-agent/1.0"
+            async with await gclient.open_session(
+                path, user_agent=user_agent
+            ) as session:
+                logger.info(f"Glonax connected to {path}")
+                logger.info(f"Instance ID: {session.instance.id}")
+                logger.info(f"Instance model: {session.instance.model}")
+                logger.info(f"Instance type: {session.instance.machine_type}")
+                logger.info(f"Instance version: {session.instance.version_string}")
+                logger.info(f"Instance serial number: {session.instance.serial_number}")
+
+                INSTANCE = session.instance
+                instance_event.set()
+                machine_service.feed(session.instance)
+
+                logger.debug("Instance event set")
+
+                with open("instance.dat", "wb") as f:
+                    pickle.dump(session.instance, f)
+
+                async for message in session:
+                    machine_service.feed(message)
+
+        except asyncio.CancelledError:
+            logger.info("Glonax task cancelled")
+            return
+        except ConnectionError as e:
+            logger.debug(f"Glonax connection error: {e}")
+            logger.error("Glonax is not running")
+        except Exception as e:
+            logger.critical(f"Unknown error: {traceback.format_exc()}")
+
+        logger.info("Reconnecting to glonax...")
+        await asyncio.sleep(1)
 
 
 async def main():
