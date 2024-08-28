@@ -24,9 +24,10 @@ class System:
             )
 
             await process.communicate()
-
             return process.returncode == 0
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f"Error checking sudo: {e}")
             return False
@@ -48,13 +49,14 @@ class System:
             )
 
             _, stderr = await reboot_process.communicate()
-
             if reboot_process.returncode == 0:
                 return True
             else:
                 logger.error(f"Error rebooting system: {stderr.decode().strip()}")
                 return False
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f"Error rebooting system: {e}")
             return False
@@ -81,7 +83,6 @@ class System:
             )
 
             _, stderr = await systemctl_process.communicate()
-
             if systemctl_process.returncode == 0:
                 return True
             else:
@@ -90,6 +91,8 @@ class System:
                 )
                 return False
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f"Error during systemctl {action}: {e}")
             return False
@@ -116,13 +119,14 @@ class System:
             )
 
             _, stderr = await apt_process.communicate()
-
             if apt_process.returncode == 0:
                 return True
             else:
                 logger.error(f"Error during apt {action}: {stderr.decode().strip()}")
                 return False
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f"Error during apt {action}: {e}")
             return False
@@ -140,7 +144,6 @@ class System:
             )
 
             stdout, stderr = await apt_process.communicate()
-
             if apt_process.returncode == 0:
                 time_str = stdout.decode().split("time=")[1].split(" ms")[0]
                 return float(time_str)
@@ -148,6 +151,8 @@ class System:
                 logger.error(f"Error during ping {stderr.decode().strip()}")
                 return
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.error(f"Error during ping: {e}")
             return False
