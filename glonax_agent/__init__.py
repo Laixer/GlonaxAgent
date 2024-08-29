@@ -70,5 +70,7 @@ class GlonaxAgent:
         self.logger.info(f"Remote address: {ip}")
         self.network_service.set_remote_addr(ip)
 
+        self.machine_service.feed(self.instance)
+
     async def _notify(self, topic: str, message: str):
         await self.management_service.notify(topic, message)
