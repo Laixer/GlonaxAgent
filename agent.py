@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import pickle
 import logging
 import configparser
@@ -16,35 +15,22 @@ from glonax import client as gclient
 from glonax_agent import GlonaxAgent
 from glonax_agent.system import System
 from glonax_agent.models import GpsTelemetry
-from glonax_agent.location import LocationService
-from glonax_agent.machine import MachineService
-from glonax_agent.host import HostService
-from glonax_agent.network import NetworkService
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
-
-
-INSTANCE: gclient.Instance | None = None
-
-instance_event = asyncio.Event()
 
 glonax_agent: GlonaxAgent | None = None
 
 
 async def update_telemetry():
-    global INSTANCE, glonax_agent, instance_event
-
-    logger.debug("Waiting for instance event")
-
-    await instance_event.wait()
+    global glonax_agent
 
     logger.info("Starting telemetry task")
 
     while True:
         await asyncio.sleep(15)
 
-        telemetry = HostService.get_telemetry(INSTANCE)
+        telemetry = glonax_agent.host_service.get_telemetry(glonax_agent.instance)
         await glonax_agent.management_service.update_host_telemetry(telemetry)
 
         await asyncio.sleep(5)
@@ -71,7 +57,7 @@ async def gps_server():
     from gps import client
     from gps.schemas import TPV
 
-    location_service = LocationService()
+    global glonax_agent
 
     while True:
         try:
@@ -79,7 +65,7 @@ async def gps_server():
                 async for result in c:
                     if isinstance(result, TPV):
                         location = GpsTelemetry(
-                            instance=str(INSTANCE.id),
+                            instance=str(glonax_agent.instance.id),
                             mode=result.mode,
                             lat=result.lat,
                             lon=result.lon,
@@ -89,7 +75,7 @@ async def gps_server():
                         )
 
                         logger.debug(location)
-                        location_service.feed(location)
+                        glonax_agent.location_service.feed(location)
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
@@ -105,11 +91,9 @@ async def gps_server():
 
 
 async def ping_server():
-    global management_service
-
     host = config["ping"]["host"]
 
-    network_service = NetworkService()
+    global glonax_agent
 
     while True:
         try:
@@ -118,7 +102,7 @@ async def ping_server():
             latency = await System.ping(host)
 
             logger.debug(f"Network latency {latency} ms")
-            network_service.feed_latency(latency)
+            glonax_agent.network_service.feed_latency(latency)
 
         except asyncio.CancelledError:
             logger.info("Ping handler cancelled")
@@ -128,7 +112,7 @@ async def ping_server():
 
 
 async def glonax_server():
-    global INSTANCE, instance_event
+    global glonax_agent
 
     logger.info("Starting glonax task")
 
@@ -138,29 +122,14 @@ async def glonax_server():
         try:
             logger.info(f"Connecting to glonax at {path}")
 
-            machine_service = MachineService()
             user_agent = "glonax-agent/1.0"
             async with await gclient.open_session(
                 path, user_agent=user_agent
             ) as session:
                 logger.info(f"Glonax connected to {path}")
-                logger.info(f"Instance ID: {session.instance.id}")
-                logger.info(f"Instance model: {session.instance.model}")
-                logger.info(f"Instance type: {session.instance.machine_type}")
-                logger.info(f"Instance version: {session.instance.version_string}")
-                logger.info(f"Instance serial number: {session.instance.serial_number}")
-
-                INSTANCE = session.instance
-                instance_event.set()
-                machine_service.feed(session.instance)
-
-                logger.debug("Instance event set")
-
-                with open("instance.dat", "wb") as f:
-                    pickle.dump(session.instance, f)
 
                 async for message in session:
-                    machine_service.feed(message)
+                    glonax_agent.machine_service.feed(message)
 
         except asyncio.CancelledError:
             logger.info("Glonax task cancelled")
@@ -176,7 +145,7 @@ async def glonax_server():
 
 
 async def main():
-    global INSTANCE, glonax_agent, instance_event
+    global glonax_agent
 
     glonax_agent = GlonaxAgent(config)
 
