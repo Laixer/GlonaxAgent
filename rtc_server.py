@@ -20,6 +20,7 @@ from glonax_agent.models import (
     GlonaxPeerConnectionParams,
     RTCIceCandidateParams,
 )
+from glonax.message import Instance
 from glonax_agent.system import System
 from aiortc import (
     RTCPeerConnection,
@@ -322,10 +323,29 @@ async def websocket():
         await asyncio.sleep(1)
 
 
+async def fetch_instance(path, file_name: str = "instance.dat") -> Instance | None:
+    import os
+    import pickle
+
+    if os.path.exists(file_name):
+        with open(file_name, "rb") as file:
+            return pickle.load(file)
+    else:
+        # TODO: Replace this with a command
+        user_agent = "glonax-agent/1.0"
+        async with await gclient.open_session(path, user_agent=user_agent) as session:
+            with open(file_name, "wb") as file:
+                pickle.dump(session.instance, file)
+            return session.instance
+
+
 async def main():
     global glonax_agent, glonax_peer_connection, media_video0
 
-    glonax_agent = GlonaxAgent(config)
+    instance = await fetch_instance(
+        config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
+    )
+    glonax_agent = GlonaxAgent(config, instance)
 
     logger.info("Starting agent")
 
@@ -397,7 +417,7 @@ if __name__ == "__main__":
     logger.setLevel(log_level)
 
     if args.log_systemd:
-        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-agent"))
+        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-rtc"))
     else:
         logger.addHandler(ColorLogHandler())
 
