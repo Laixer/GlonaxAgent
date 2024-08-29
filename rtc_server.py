@@ -43,7 +43,7 @@ class GlonaxPeerConnection:
     allowed_video_sizes = ["1920x1080", "1280x720", "640x480"]
 
     def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
-        global media_video0, media_relay
+        global glonax_agent, media_video0, media_relay
 
         self._connection_id = params.connection_id
 
@@ -67,7 +67,11 @@ class GlonaxPeerConnection:
                 await self.__peer_connection.close()
                 await self._stop()
             elif self.__peer_connection.connectionState == "connected":
-                logger.info("RTC connection established")
+                logger.info(f"RTC connection {self._connection_id} established")
+
+                await glonax_agent._notify(
+                    "RTC.CONNECTED", f"RTC connection {self._connection_id} established"
+                )
             elif self.__peer_connection.connectionState == "closed":
                 await self._stop()
 
@@ -152,11 +156,15 @@ class GlonaxPeerConnection:
             await asyncio.sleep(1)
 
     async def _stop(self) -> None:
-        global glonax_peer_connection
-
-        logger.info("Stopping peer connection")
+        global glonax_agent, glonax_peer_connection
 
         try:
+            logger.info(f"RTC connection {self._connection_id} disconnected")
+
+            await glonax_agent._notify(
+                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} established"
+            )
+
             if self.__task is not None:
                 self.__task.cancel()
                 self.__task = None
