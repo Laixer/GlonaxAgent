@@ -7,22 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class MachineService:
-    __cls_instance = None
-
-    def __new__(cls):
-        if cls.__cls_instance is None:
-            cls.__cls_instance = super().__new__(cls)
-        return cls.__cls_instance
-
     def __init__(self):
-        if not hasattr(self, "_instance"):
-            self._instance = None
-        if not hasattr(self, "_engine"):
-            self._engine = None
-        if not hasattr(self, "module_status"):
-            self.module_status = {}
-        if not hasattr(self, "_motion"):
-            self._motion = None
+        self._instance = None
+        self._engine = None
+        self.module_status = {}
+        self._motion = None
 
     def feed(self, message):
         if isinstance(message, Instance):
