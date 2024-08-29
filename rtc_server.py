@@ -263,8 +263,12 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
 
 @dispatcher.rpc_call
 async def reboot():
+    global glonax_agent
+
     if await System.is_sudo():
         logger.info("Rebooting system")
+
+        await glonax_agent._notify("RTC.COMMAND.REBOOT", "Command system reboot")
         await System.reboot()
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
@@ -272,8 +276,14 @@ async def reboot():
 
 @dispatcher.rpc_call
 async def systemctl(operation: str, service: str):
+    global glonax_agent
+
     if await System.is_sudo():
         logger.info(f"Running systemctl {operation} {service}")
+
+        await glonax_agent._notify(
+            "RTC.COMMAND.SYSTEMCTL", f"Command systemctl {operation} {service}"
+        )
         await System.systemctl(operation, service)
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
@@ -281,8 +291,14 @@ async def systemctl(operation: str, service: str):
 
 @dispatcher.rpc_call
 async def apt(operation: str, package: str):
+    global glonax_agent
+
     if await System.is_sudo():
         logger.info(f"Running apt {operation} {package}")
+
+        await glonax_agent._notify(
+            "RTC.COMMAND.APT", f"Command apt {operation} {package}"
+        )
         await System.apt(operation, package)
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
