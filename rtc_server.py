@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import os
-import pickle
 import logging
 import configparser
 import argparse
@@ -18,7 +16,6 @@ from glonax_agent import GlonaxAgent
 from log import ColorLogHandler
 from glonax import client as gclient
 from glonax_agent.models import (
-    GpsTelemetry,
     GlonaxPeerConnectionParams,
     RTCIceCandidateParams,
 )
@@ -28,7 +25,6 @@ from aiortc import (
     RTCSessionDescription,
     RTCIceCandidate,
 )
-from glonax_agent.management import ManagementService
 from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
@@ -37,12 +33,6 @@ import jsonrpc
 config = configparser.ConfigParser()
 logger = logging.getLogger()
 
-
-INSTANCE: gclient.Instance | None = None
-
-# instance_event = asyncio.Event()
-
-management_service: ManagementService | None = None
 
 glonax_agent: GlonaxAgent | None = None
 
@@ -234,7 +224,7 @@ async def update_rtc(
     logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
     sdp = candidate_inc.candidate.replace("candidate:", "")
-    candidate = Candidate.from_sdp(sdp)
+    candidate = Candidate.from_sdp(sdp)  # TODO: This thing can throw an exception
 
     candidate = candidate_from_aioice(candidate)
     candidate.sdpMid = candidate_inc.sdpMid
@@ -274,9 +264,6 @@ async def reboot():
 
 @dispatcher.rpc_call
 async def systemctl(operation: str, service: str):
-    # services = ["glonax", "glonax-agent", "glonax-inpput"]
-    # if service in services:
-    #     proc_service_restart(service_name)
     if await System.is_sudo():
         logger.info(f"Running systemctl {operation} {service}")
         await System.systemctl(operation, service)
@@ -299,11 +286,7 @@ def echo(input):
 
 
 async def websocket():
-    global INSTANCE, glonax_agent
-
-    logger.debug("Waiting for instance event")
-
-    # await instance_event.wait()
+    global glonax_agent
 
     logger.info("Starting websocket task")
 
@@ -342,7 +325,7 @@ async def websocket():
 
 
 async def main():
-    global INSTANCE, glonax_agent, glonax_peer_connection, media_video0
+    global glonax_agent, glonax_peer_connection, media_video0
 
     glonax_agent = GlonaxAgent(config)
 
