@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import jsonrpc
 import configparser
 import argparse
 import traceback
@@ -28,11 +29,8 @@ from aiortc import (
 from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
-import jsonrpc
-
 config = configparser.ConfigParser()
 logger = logging.getLogger()
-
 
 glonax_agent: GlonaxAgent | None = None
 
@@ -388,6 +386,11 @@ if __name__ == "__main__":
         default="config.ini",
         help="Specify the configuration file to use",
     )
+    parser.add_argument(
+        "--cache",
+        default="instance.dat",
+        help="Specify the cache file to use",
+    )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
@@ -399,5 +402,6 @@ if __name__ == "__main__":
         logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
+    config["DEFAULT"]["cache"] = args.cache
 
     asyncio.run(main())

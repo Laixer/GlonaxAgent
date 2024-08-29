@@ -7,7 +7,6 @@ import traceback
 import asyncio
 
 from systemd import journal
-
 from log import ColorLogHandler
 from glonax import client as gclient
 
@@ -193,6 +192,11 @@ if __name__ == "__main__":
         default="config.ini",
         help="Specify the configuration file to use",
     )
+    parser.add_argument(
+        "--cache",
+        default="instance.dat",
+        help="Specify the cache file to use",
+    )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
@@ -204,5 +208,6 @@ if __name__ == "__main__":
         logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
+    config["DEFAULT"]["cache"] = args.cache
 
     asyncio.run(main())

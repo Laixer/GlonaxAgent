@@ -41,14 +41,14 @@ class GlonaxAgent:
         self.logger = logging.getLogger(__name__)
         self.logger.info("GlonaxAgent initialized")
 
-        self.instance = _load_cache()
+        self.instance = _load_cache(self.config["DEFAULT"]["cache"])
         if self.instance is None:
             # TODO: Connect to Glonax
             pass
 
         assert self.instance is not None
 
-        _dump_cache(self.instance)
+        _dump_cache(self.instance, self.config["DEFAULT"]["cache"])
         self.machine_service.feed(self.instance)
 
         self.logger.info(f"Instance ID: {self.instance.id}")
