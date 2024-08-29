@@ -160,19 +160,22 @@ class GlonaxPeerConnection:
 
         logger.info("Stopping peer connection")
 
-        if self.__task is not None:
-            self.__task.cancel()
-            self.__task = None
-        if self.__glonax_session is not None:
-            await self.__glonax_session.motion_stop_all()
-            await self.__glonax_session.close()
-            self.__glonax_session = None
+        try:
+            if self.__task is not None:
+                self.__task.cancel()
+                self.__task = None
+            if self.__glonax_session is not None:
+                await self.__glonax_session.motion_stop_all()
+                await self.__glonax_session.close()
+                self.__glonax_session = None
 
-        if self.__peer_connection is not None:
-            await self.__peer_connection.close()
-            self.__peer_connection = None
-
-        glonax_peer_connection = None
+            if self.__peer_connection is not None:
+                await self.__peer_connection.close()
+                self.__peer_connection = None
+        except Exception as e:
+            logger.error(f"Error stopping peer connection: {e}")
+        finally:
+            glonax_peer_connection = None
 
 
 # TODO: Add roles to the RPC calls
