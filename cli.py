@@ -91,7 +91,7 @@ async def run_offer(pc, signaling):
 #         loop.run_until_complete(signaling.close())
 
 import json
-from jsonrpc import JSONRPCRequest, JSONRPCResponse, JSONRPCError
+from glonax_agent.jsonrpc import JSONRPCRequest, JSONRPCResponse, JSONRPCError
 
 from abc import ABC, abstractmethod
 

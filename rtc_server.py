@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-import jsonrpc
 import configparser
 import argparse
 import traceback
@@ -9,26 +8,23 @@ import asyncio
 import websockets
 
 from systemd import journal
+from log import ColorLogHandler
 from aioice import Candidate
 from aiortc import RTCPeerConnection, RTCSessionDescription, InvalidStateError
 from aiortc.contrib.media import MediaPlayer, MediaRelay
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+from aiortc.rtcicetransport import candidate_from_aioice
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 
-from glonax_agent import GlonaxAgent
-from log import ColorLogHandler
 from glonax import client as gclient
+from glonax_agent import GlonaxAgent
 from glonax_agent.models import (
     GlonaxPeerConnectionParams,
     RTCIceCandidateParams,
 )
 from glonax.message import Instance
 from glonax_agent.system import System
-from aiortc import (
-    RTCPeerConnection,
-    RTCSessionDescription,
-    RTCIceCandidate,
-)
-from aiortc.rtcicetransport import candidate_from_aioice
-from aiortc.contrib.media import MediaPlayer, MediaRelay
+import glonax_agent.jsonrpc as jsonrpc
 
 APP_NAME = "glonax-rtc"
 
