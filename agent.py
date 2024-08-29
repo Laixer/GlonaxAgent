@@ -169,7 +169,7 @@ async def main():
     )
     glonax_agent = GlonaxAgent(config, instance)
 
-    logger.info("Starting agent")
+    logger.info(f"Starting {APP_NAME}")
 
     try:
         await glonax_agent._boot()
