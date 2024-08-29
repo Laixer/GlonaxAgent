@@ -161,7 +161,7 @@ async def main():
             task1 = tg.create_task(glonax_server())
             task2 = tg.create_task(ping_server())
             task3 = tg.create_task(gps_server())
-            task5 = tg.create_task(update_telemetry())
+            task4 = tg.create_task(update_telemetry())
 
     except asyncio.CancelledError:
         await glonax_agent._notify(

@@ -39,8 +39,6 @@ class GlonaxAgent:
     def __init__(self, config):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        # self.logger.setLevel(logging.DEBUG)
-        # self.logger.addHandler(logging.StreamHandler())
         self.logger.info("GlonaxAgent initialized")
 
         self.instance = _load_cache()
@@ -51,7 +49,7 @@ class GlonaxAgent:
         assert self.instance is not None
 
         _dump_cache(self.instance)
-        # self.machine_service.feed(_instance)
+        self.machine_service.feed(self.instance)
 
         self.logger.info(f"Instance ID: {self.instance.id}")
         self.logger.info(f"Instance model: {self.instance.model}")
@@ -69,8 +67,6 @@ class GlonaxAgent:
         ip = await self.management_service.remote_ip()
         self.logger.info(f"Remote address: {ip}")
         self.network_service.set_remote_addr(ip)
-
-        self.machine_service.feed(self.instance)
 
     async def _notify(self, topic: str, message: str):
         await self.management_service.notify(topic, message)
