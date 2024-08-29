@@ -15,13 +15,13 @@ class MachineService:
         return cls.__cls_instance
 
     def __init__(self):
-        if not hasattr(self, "instance"):
+        if not hasattr(self, "_instance"):
             self._instance = None
-        if not hasattr(self, "engine"):
+        if not hasattr(self, "_engine"):
             self._engine = None
         if not hasattr(self, "module_status"):
             self.module_status = {}
-        if not hasattr(self, "motion"):
+        if not hasattr(self, "_motion"):
             self._motion = None
 
     def feed(self, message):

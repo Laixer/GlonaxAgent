@@ -2,7 +2,7 @@ import os
 import time
 import psutil
 from glonax.message import Instance
-from models import HostTelemetry
+from glonax_agent.models import HostTelemetry
 
 
 class HostService:

@@ -3,7 +3,7 @@ import logging
 import traceback
 from uuid import UUID
 
-from models import GpsTelemetry, HostTelemetry
+from glonax_agent.models import GpsTelemetry, HostTelemetry
 
 logger = logging.getLogger(__name__)
 

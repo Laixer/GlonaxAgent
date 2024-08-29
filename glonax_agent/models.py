@@ -30,6 +30,10 @@ class GpsTelemetry:
     lon: float | None = None
     alt: float | None = None
     speed: float | None = None
+    heading: float | None = None
+
+    def __str__(self):
+        return f"Location ({round(self.lat, 5)}, {round(self.lon, 5)})"
 
     def as_dict(self):
         return asdict(self)

@@ -1,15 +1,6 @@
 import time
-from dataclasses import dataclass
 
-
-@dataclass
-class Location:
-    fix: bool = False
-    latitude: float | None = None
-    longitude: float | None = None
-    speed: float | None = None
-    altitude: float | None = None
-    heading: float | None = None
+from glonax_agent.models import GpsTelemetry
 
 
 class LocationService:
@@ -24,13 +15,23 @@ class LocationService:
         if not hasattr(self, "location"):
             self.location = None
 
-    def feed(self, location: Location):
+    def feed(self, location: GpsTelemetry):
         self.location = location
         self.timestamp = time.time()
 
-    def last_location(self) -> Location | None:
+    @property
+    def last_location(self) -> GpsTelemetry | None:
         return self.location
 
+    @property
+    def current_location(self) -> GpsTelemetry | None:
+        if self.location is None:
+            return None
+        if time.time() - self.timestamp > 30:
+            return None
+        return self.location
+
+    @property
     def has_fix(self) -> bool:
         if self.location is None:
             return False
