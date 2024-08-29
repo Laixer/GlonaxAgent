@@ -30,6 +30,8 @@ from aiortc import (
 from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
+APP_NAME = "glonax-rtc"
+
 config = configparser.ConfigParser()
 logger = logging.getLogger()
 
@@ -323,7 +325,7 @@ async def websocket():
         await asyncio.sleep(1)
 
 
-async def fetch_instance(path, file_name: str = "instance.dat") -> Instance | None:
+async def fetch_instance(path, file_name: str) -> Instance | None:
     import os
     import pickle
 
@@ -347,7 +349,7 @@ async def main():
     )
     glonax_agent = GlonaxAgent(config, instance)
 
-    logger.info("Starting agent")
+    logger.info("Starting RTC server")
 
     try:
         await glonax_agent._boot()
@@ -408,7 +410,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cache",
-        default="instance.dat",
+        default="cache.db",
         help="Specify the cache file to use",
     )
     args = parser.parse_args()
@@ -417,7 +419,7 @@ if __name__ == "__main__":
     logger.setLevel(log_level)
 
     if args.log_systemd:
-        logger.addHandler(journal.JournaldLogHandler(identifier="glonax-rtc"))
+        logger.addHandler(journal.JournaldLogHandler(identifier=APP_NAME))
     else:
         logger.addHandler(ColorLogHandler())
 
