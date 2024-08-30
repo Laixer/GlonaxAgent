@@ -250,6 +250,9 @@ async def update_rtc(
     if params.connection_id != glonax_peer_connection.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
+    if not candidate_inc.candidate:
+        raise jsonrpc.JSONRPCRuntimeError("Invalid ICE candidate")
+
     logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
     sdp = candidate_inc.candidate.replace("candidate:", "")
