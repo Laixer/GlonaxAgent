@@ -65,7 +65,7 @@ class GlonaxPeerConnection:
             )
             if self.__peer_connection.connectionState == "failed":
                 await self.__peer_connection.close()
-                await self._stop()
+                await self._on_disconnect()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
 
@@ -73,7 +73,22 @@ class GlonaxPeerConnection:
                     "RTC.CONNECTED", f"RTC connection {self._connection_id} established"
                 )
             elif self.__peer_connection.connectionState == "closed":
-                await self._stop()
+                await self._on_disconnect()
+
+                # logger.info(f"RTC connection {self._connection_id} disconnected")
+
+                # await glonax_agent._notify(
+                #     "RTC.DISCONNECTED",
+                #     f"RTC connection {self._connection_id} disconnected",
+                # )
+
+                # if self.__task is not None:
+                #     self.__task.cancel()
+                #     self.__task = None
+                # if self.__glonax_session is not None:
+                #     await self.__glonax_session.motion_stop_all()
+                #     await self.__glonax_session.close()
+                #     self.__glonax_session = None
 
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
@@ -155,14 +170,14 @@ class GlonaxPeerConnection:
             logger.info("Reconnecting to glonax...")
             await asyncio.sleep(1)
 
-    async def _stop(self) -> None:
+    async def _on_disconnect(self) -> None:
         global glonax_agent, glonax_peer_connection
 
         try:
             logger.info(f"RTC connection {self._connection_id} disconnected")
 
             await glonax_agent._notify(
-                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} established"
+                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} disconnected"
             )
 
             if self.__task is not None:
@@ -173,13 +188,19 @@ class GlonaxPeerConnection:
                 await self.__glonax_session.close()
                 self.__glonax_session = None
 
+            # if self.__peer_connection is not None:
+            #     await self.__peer_connection.close()
+            #     self.__peer_connection = None
             if self.__peer_connection is not None:
-                await self.__peer_connection.close()
                 self.__peer_connection = None
         except Exception as e:
             logger.error(f"Error stopping peer connection: {e}")
         finally:
             glonax_peer_connection = None
+
+    async def _stop(self) -> None:
+        if self.__peer_connection is not None:
+            await self.__peer_connection.close()
 
 
 # TODO: Add roles to the RPC calls
