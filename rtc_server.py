@@ -75,21 +75,6 @@ class GlonaxPeerConnection:
             elif self.__peer_connection.connectionState == "closed":
                 await self._on_disconnect()
 
-                # logger.info(f"RTC connection {self._connection_id} disconnected")
-
-                # await glonax_agent._notify(
-                #     "RTC.DISCONNECTED",
-                #     f"RTC connection {self._connection_id} disconnected",
-                # )
-
-                # if self.__task is not None:
-                #     self.__task.cancel()
-                #     self.__task = None
-                # if self.__glonax_session is not None:
-                #     await self.__glonax_session.motion_stop_all()
-                #     await self.__glonax_session.close()
-                #     self.__glonax_session = None
-
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
             if channel.label == "signal":
@@ -188,9 +173,6 @@ class GlonaxPeerConnection:
                 await self.__glonax_session.close()
                 self.__glonax_session = None
 
-            # if self.__peer_connection is not None:
-            #     await self.__peer_connection.close()
-            #     self.__peer_connection = None
             if self.__peer_connection is not None:
                 self.__peer_connection = None
         except Exception as e:
@@ -256,7 +238,7 @@ async def update_rtc(
     logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
     sdp = candidate_inc.candidate.replace("candidate:", "")
-    candidate = Candidate.from_sdp(sdp)  # TODO: This thing can throw an exception
+    candidate = Candidate.from_sdp(sdp)
 
     candidate = candidate_from_aioice(candidate)
     candidate.sdpMid = candidate_inc.sdpMid
