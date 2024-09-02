@@ -373,7 +373,7 @@ async def fetch_instance(path, file_name: str) -> Instance | None:
 
 
 async def main():
-    import socketio
+    # import socketio
 
     global glonax_agent, glonax_peer_connection, media_video0
 
@@ -389,44 +389,46 @@ async def main():
 
         glonax_agent.media_service.add_source(config["camera0"])
 
-        # # TODO: Create a service for the video device
-        # try:
-        #     camera0 = config["camera0"]
-        #     device = camera0["device"]
+        # TODO: Create a service for the video device
+        try:
+            camera0 = config["camera0"]
+            device = camera0["device"]
 
-        #     logger.info(f"Opening video device {device}")
+            logger.info(f"Opening video device {device}")
 
-        #     media_video0 = MediaPlayer(
-        #         device,
-        #         format="v4l2",
-        #         options={
-        #             "framerate": camera0.get("frame_rate", "30"),
-        #             "video_size": camera0.get("video_size", "640x480"),
-        #             "preset": "ultrafast",
-        #             "tune": "zerolatency",
-        #         },
-        #     )
-        # except Exception as e:
-        #     logger.error(f"Error opening video device: {e}")
+            media_video0 = MediaPlayer(
+                device,
+                format="v4l2",
+                options={
+                    "framerate": camera0.get("frame_rate", "30"),
+                    "video_size": camera0.get("video_size", "640x480"),
+                    "preset": "ultrafast",
+                    "tune": "zerolatency",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error opening video device: {e}")
 
-        sio = socketio.AsyncClient()
+        # sio = socketio.AsyncClient()
 
-        @sio.event
-        async def connect():
-            logger.info("SocketIO connection established")
+        # @sio.event
+        # async def connect():
+        #     logger.info("SocketIO connection established")
 
-        @sio.event
-        async def hello(data):
-            logger.info("message received with ", data)
-            await sio.emit("my response", {"response": "my response"})
+        # @sio.event
+        # async def hello(data):
+        #     logger.info("message received with ", data)
+        #     await sio.emit("my response", {"response": "my response"})
 
-        @sio.event
-        async def disconnect():
-            logger.info("SocketIO disconnected")
+        # @sio.event
+        # async def disconnect():
+        #     logger.info("SocketIO disconnected")
 
-        await sio.connect("http://urchin-app-l3b6h.ondigitalocean.app")
-        # await sio.connect("http://localhost:3000")
-        await sio.wait()
+        # await sio.connect("http://urchin-app-l3b6h.ondigitalocean.app")
+        # # await sio.connect("http://localhost:3000")
+        # await sio.wait()
+
+        await websocket()
 
     except asyncio.CancelledError:
         if glonax_peer_connection is not None:
