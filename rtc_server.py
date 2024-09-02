@@ -169,6 +169,9 @@ class GlonaxPeerConnection:
         try:
             logger.info(f"RTC connection {self._connection_id} disconnecting")
 
+            if self._task_monitor is not None:
+                self._task_monitor.cancel()
+                self._task_monitor = None
             if self.__task is not None:
                 self.__task.cancel()
                 self.__task = None
