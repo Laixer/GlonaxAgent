@@ -5,6 +5,7 @@ from glonax_agent.host import HostService
 from glonax_agent.location import LocationService
 from glonax_agent.machine import MachineService
 from glonax_agent.management import ManagementService
+from glonax_agent.media import MediaService
 from glonax_agent.network import NetworkService
 
 
@@ -13,6 +14,7 @@ class GlonaxAgent:
     location_service = LocationService()
     machine_service = MachineService()
     network_service = NetworkService()
+    media_service = MediaService()
 
     def __init__(self, config, instance: Instance):
         self.config = config
