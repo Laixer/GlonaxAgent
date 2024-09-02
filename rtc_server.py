@@ -159,11 +159,7 @@ class GlonaxPeerConnection:
         global glonax_agent, glonax_peer_connection
 
         try:
-            logger.info(f"RTC connection {self._connection_id} disconnected")
-
-            await glonax_agent._notify(
-                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} disconnected"
-            )
+            logger.info(f"RTC connection {self._connection_id} disconnecting")
 
             if self.__task is not None:
                 self.__task.cancel()
@@ -179,6 +175,12 @@ class GlonaxPeerConnection:
             logger.error(f"Error stopping peer connection: {e}")
         finally:
             glonax_peer_connection = None
+
+            logger.info(f"RTC connection {self._connection_id} disconnected")
+
+            await glonax_agent._notify(
+                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} disconnected"
+            )
 
     async def _stop(self) -> None:
         if self.__peer_connection is not None:
@@ -371,6 +373,8 @@ async def fetch_instance(path, file_name: str) -> Instance | None:
 
 
 async def main():
+    import socketio
+
     global glonax_agent, glonax_peer_connection, media_video0
 
     instance = await fetch_instance(
@@ -383,27 +387,46 @@ async def main():
     try:
         await glonax_agent._boot()
 
-        # TODO: Create a service for the video device
-        try:
-            camera0 = config["camera0"]
-            device = camera0["device"]
+        glonax_agent.media_service.add_source(config["camera0"])
 
-            logger.info(f"Opening video device {device}")
+        # # TODO: Create a service for the video device
+        # try:
+        #     camera0 = config["camera0"]
+        #     device = camera0["device"]
 
-            media_video0 = MediaPlayer(
-                device,
-                format="v4l2",
-                options={
-                    "framerate": camera0.get("frame_rate", "30"),
-                    "video_size": camera0.get("video_size", "640x480"),
-                    "preset": "ultrafast",
-                    "tune": "zerolatency",
-                },
-            )
-        except Exception as e:
-            logger.error(f"Error opening video device: {e}")
+        #     logger.info(f"Opening video device {device}")
 
-        await websocket()
+        #     media_video0 = MediaPlayer(
+        #         device,
+        #         format="v4l2",
+        #         options={
+        #             "framerate": camera0.get("frame_rate", "30"),
+        #             "video_size": camera0.get("video_size", "640x480"),
+        #             "preset": "ultrafast",
+        #             "tune": "zerolatency",
+        #         },
+        #     )
+        # except Exception as e:
+        #     logger.error(f"Error opening video device: {e}")
+
+        sio = socketio.AsyncClient()
+
+        @sio.event
+        async def connect():
+            logger.info("SocketIO connection established")
+
+        @sio.event
+        async def hello(data):
+            logger.info("message received with ", data)
+            await sio.emit("my response", {"response": "my response"})
+
+        @sio.event
+        async def disconnect():
+            logger.info("SocketIO disconnected")
+
+        await sio.connect("http://urchin-app-l3b6h.ondigitalocean.app")
+        # await sio.connect("http://localhost:3000")
+        await sio.wait()
 
     except asyncio.CancelledError:
         if glonax_peer_connection is not None:
