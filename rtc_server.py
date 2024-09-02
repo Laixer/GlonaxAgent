@@ -65,7 +65,6 @@ class GlonaxPeerConnection:
             )
             if self.__peer_connection.connectionState == "failed":
                 await self.__peer_connection.close()
-                await self._on_disconnect()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
 
@@ -226,16 +225,18 @@ async def update_rtc(
     global glonax_peer_connection
 
     if not params.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+        raise jsonrpc.JSONRPCRuntimeError("No connection ID")
 
     if glonax_peer_connection is None:
         raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
 
     if params.connection_id != glonax_peer_connection.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+        raise jsonrpc.JSONRPCRuntimeError(
+            f"Invalid connection ID {params.connection_id}, current connection ID {glonax_peer_connection.connection_id}"
+        )
 
     if not candidate_inc.candidate:
-        raise jsonrpc.JSONRPCRuntimeError("Invalid ICE candidate")
+        raise jsonrpc.JSONRPCRuntimeError("No ICE candidate")
 
     logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
 
