@@ -53,6 +53,7 @@ class GlonaxPeerConnection:
         self.__peer_connection = RTCPeerConnection()
         self.__glonax_session = None
         self.__task = None
+        self._task_monitor = None
 
         video = media_relay.subscribe(media_video0.video, buffered=False)
 
@@ -67,6 +68,9 @@ class GlonaxPeerConnection:
                 await self.__peer_connection.close()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
+
+                self._task_monitor.cancel()
+                self._task_monitor = None
 
                 await glonax_agent._notify(
                     "RTC.CONNECTED", f"RTC connection {self._connection_id} established"
@@ -113,6 +117,7 @@ class GlonaxPeerConnection:
     async def create_answer(self) -> RTCSessionDescription:
         answer = await self.__peer_connection.createAnswer()
         await self.__peer_connection.setLocalDescription(answer)
+        self._task_monitor = asyncio.create_task(self._monitor())
         return self.__peer_connection.localDescription
 
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
@@ -153,6 +158,12 @@ class GlonaxPeerConnection:
 
             logger.info("Reconnecting to glonax...")
             await asyncio.sleep(1)
+
+    async def _monitor(self):
+        await asyncio.sleep(60)
+
+        logger.info(f"RTC connection {self._connection_id} timed out")
+        await self.__peer_connection.close()
 
     async def _on_disconnect(self) -> None:
         global glonax_agent, glonax_peer_connection
