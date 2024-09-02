@@ -69,9 +69,6 @@ class GlonaxPeerConnection:
             elif self.__peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
 
-                self._task_monitor.cancel()
-                self._task_monitor = None
-
                 await glonax_agent._notify(
                     "RTC.CONNECTED", f"RTC connection {self._connection_id} established"
                 )
@@ -162,8 +159,9 @@ class GlonaxPeerConnection:
     async def _monitor(self):
         await asyncio.sleep(60)
 
-        logger.info(f"RTC connection {self._connection_id} timed out")
-        await self.__peer_connection.close()
+        if self.__peer_connection.connectionState != "connected":
+            logger.info(f"RTC connection {self._connection_id} timed out")
+            await self.__peer_connection.close()
 
     async def _on_disconnect(self) -> None:
         global glonax_agent, glonax_peer_connection
