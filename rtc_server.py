@@ -27,6 +27,7 @@ from glonax_agent.system import System
 import glonax_agent.jsonrpc as jsonrpc
 
 APP_NAME = "glonax-rtc"
+UNIX_SOCKET = "/var/run/glonax.sock"
 
 config = configparser.ConfigParser()
 logger = logging.getLogger()
@@ -476,6 +477,12 @@ if __name__ == "__main__":
         help="Specify the configuration file to use",
     )
     parser.add_argument(
+        "-s",
+        "--socket",
+        default=UNIX_SOCKET,
+        help="Specify the UNIX socket path to use",
+    )
+    parser.add_argument(
         "--cache",
         default="cache.db",
         help="Specify the cache file to use",
@@ -492,5 +499,6 @@ if __name__ == "__main__":
 
     config.read(args.config)
     config["DEFAULT"]["cache"] = args.cache
+    config["glonax"]["unix_socket"] = args.socket
 
     asyncio.run(main())
