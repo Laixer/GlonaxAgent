@@ -49,7 +49,7 @@ class GlonaxPeerConnection:
         self._connection_id = params.connection_id
 
         self.__socket_path = socket_path
-        self.__user_agent = params.user_agent
+        self.__user_agent = params.user_agent + f"/{glonax_agent.instance.id}"
 
         self.__peer_connection = RTCPeerConnection()
         self.__glonax_session = None
