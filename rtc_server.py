@@ -207,9 +207,15 @@ dispatcher = jsonrpc.Dispatcher()
 async def setup_rtc(
     params: GlonaxPeerConnectionParams, offer: RTCSessionDescription
 ) -> str:
+    from passlib.hash import pbkdf2_sha256
+
     global glonax_peer_connection
 
     path = config["glonax"]["unix_socket"]
+    secret = config["auth"]["secret"]
+
+    # if not pbkdf2_sha256.verify(secret, params.hash):
+    #     raise jsonrpc.JSONRPCRuntimeError("Invalid hash")
 
     if not params.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("No connection ID")
