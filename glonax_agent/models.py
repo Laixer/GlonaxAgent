@@ -44,6 +44,7 @@ class GlonaxPeerConnectionParams:
     connection_id: int
     video_track: int = 0
     user_agent: str = "glonax-rtc/1.0"
+    auth_token: str = ""
 
 
 @dataclass
