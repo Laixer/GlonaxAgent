@@ -212,7 +212,7 @@ async def setup_rtc(
     global glonax_peer_connection
 
     path = config["glonax"]["unix_socket"]
-    secret = config["auth"]["secret"]
+    # secret = config["auth"]["secret"]
 
     # if not pbkdf2_sha256.verify(secret, params.auth_token):
     #     raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
