@@ -9,7 +9,7 @@ Type=simple
 #Group=your_group
 WorkingDirectory=/home/eve/glonax_agent
 StateDirectory=glonax-agent
-ExecStart=/bin/bash -c 'source /home/eve/glonax_agent/.venv/bin/activate && python3 /home/eve/glonax_agent/rtc_server.py --log-systemd --cache=/var/lib/glonax-agent/cache.db'
+ExecStart=/bin/bash -c 'source /home/eve/glonax_agent/.venv/bin/activate && python3 /home/eve/glonax_agent/rtc_server.py --log-systemd --cache=/var/lib/glonax-agent/cache.db --socket=/run/glonax/glonax.sock'
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
