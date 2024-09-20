@@ -422,7 +422,7 @@ async def main():
                 options={
                     "framerate": camera0.get("frame_rate", "30"),
                     # "video_size": camera0.get("video_size", "320x240"),
-                    "video_size": "640x480",
+                    "video_size": "320x240",
                     "preset": "ultrafast",
                     "tune": "zerolatency",
                 },
