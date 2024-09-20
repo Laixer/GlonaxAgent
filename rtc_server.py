@@ -49,7 +49,7 @@ class GlonaxPeerConnection:
         self._connection_id = params.connection_id
 
         self.__socket_path = socket_path
-        self.__user_agent = params.user_agent + f"/{glonax_agent.instance.id}"
+        self.__user_agent = params.user_agent
 
         self.__peer_connection = RTCPeerConnection()
         self.__glonax_session = None
@@ -207,7 +207,7 @@ dispatcher = jsonrpc.Dispatcher()
 async def setup_rtc(
     params: GlonaxPeerConnectionParams, offer: RTCSessionDescription
 ) -> str:
-    from passlib.hash import pbkdf2_sha256
+    # from passlib.hash import pbkdf2_sha256
 
     global glonax_peer_connection
 
