@@ -29,6 +29,9 @@ import glonax_agent.jsonrpc as jsonrpc
 APP_NAME = "glonax-rtc"
 UNIX_SOCKET = "/var/run/glonax.sock"
 
+VIDEO_TRACKS = [0]
+VIDEO_SIZES = ["1920x1080", "1280x720", "640x480", "320x240"]
+
 config = configparser.ConfigParser()
 logger = logging.getLogger()
 
@@ -40,9 +43,6 @@ media_relay = MediaRelay()
 
 
 class GlonaxPeerConnection:
-    allowed_video_tracks = [0]
-    allowed_video_sizes = ["1920x1080", "1280x720", "640x480"]
-
     def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
         global glonax_agent, media_video0, media_relay
 
@@ -296,7 +296,7 @@ async def reboot():
     if await System.is_sudo():
         logger.info("Rebooting system")
 
-        await glonax_agent._notify("RTC.COMMAND.REBOOT", "Command system reboot")
+        # await glonax_agent._notify("RTC.COMMAND.REBOOT", "Command system reboot")
         await System.reboot()
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
@@ -309,9 +309,9 @@ async def systemctl(operation: str, service: str):
     if await System.is_sudo():
         logger.info(f"Running systemctl {operation} {service}")
 
-        await glonax_agent._notify(
-            "RTC.COMMAND.SYSTEMCTL", f"Command systemctl {operation} {service}"
-        )
+        # await glonax_agent._notify(
+        #     "RTC.COMMAND.SYSTEMCTL", f"Command systemctl {operation} {service}"
+        # )
         await System.systemctl(operation, service)
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
@@ -324,9 +324,9 @@ async def apt(operation: str, package: str):
     if await System.is_sudo():
         logger.info(f"Running apt {operation} {package}")
 
-        await glonax_agent._notify(
-            "RTC.COMMAND.APT", f"Command apt {operation} {package}"
-        )
+        # await glonax_agent._notify(
+        #     "RTC.COMMAND.APT", f"Command apt {operation} {package}"
+        # )
         await System.apt(operation, package)
     else:
         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
@@ -416,13 +416,16 @@ async def main():
 
             logger.info(f"Opening video device {device}")
 
+            video_size = camera0.get("video_size", "1280x720")
+            if video_size not in VIDEO_SIZES:
+                raise ValueError("Invalid video size")
+
             media_video0 = MediaPlayer(
                 device,
                 format="v4l2",
                 options={
-                    "framerate": camera0.get("frame_rate", "30"),
-                    # "video_size": camera0.get("video_size", "320x240"),
-                    "video_size": "320x240",
+                    "framerate": "30",
+                    "video_size": video_size,
                     "preset": "ultrafast",
                     "tune": "zerolatency",
                 },
