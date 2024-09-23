@@ -211,30 +211,35 @@ async def setup_rtc(
 
     global glonax_peer_connection
 
-    path = config["glonax"]["unix_socket"]
-    # secret = config["auth"]["secret"]
+    try:
+        path = config["glonax"]["unix_socket"]
+        # secret = config["auth"]["secret"]
 
-    # if not pbkdf2_sha256.verify(secret, params.auth_token):
-    #     raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
+        # if not pbkdf2_sha256.verify(secret, params.auth_token):
+        #     raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
-    if not params.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("No connection ID")
+        if not params.connection_id:
+            raise jsonrpc.JSONRPCRuntimeError("No connection ID")
 
-    if offer.type != "offer":
-        raise jsonrpc.JSONRPCRuntimeError("Invalid offer type, expected offer")
+        if offer.type != "offer":
+            raise jsonrpc.JSONRPCRuntimeError("Invalid offer type, expected offer")
 
-    if glonax_peer_connection is not None:
-        raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
+        if glonax_peer_connection is not None:
+            raise jsonrpc.JSONRPCRuntimeError("RTC connection already established")
 
-    logger.info(f"Setting up RTC connection {params.connection_id}")
+        logger.info(f"Setting up RTC connection {params.connection_id}")
 
-    peer_connection = GlonaxPeerConnection(path, params)
+        peer_connection = GlonaxPeerConnection(path, params)
 
-    await peer_connection.set_remote_description(offer)
-    answer = await peer_connection.create_answer()
+        await peer_connection.set_remote_description(offer)
+        answer = await peer_connection.create_answer()
 
-    glonax_peer_connection = peer_connection
-    return answer
+        glonax_peer_connection = peer_connection
+        return answer
+
+    except Exception as e:
+        logger.error(f"Error setting up RTC connection: {e}")
+        raise jsonrpc.JSONRPCRuntimeError("Error setting up RTC connection")
 
 
 @dispatcher.rpc_call
@@ -243,50 +248,62 @@ async def update_rtc(
 ) -> str:
     global glonax_peer_connection
 
-    if not params.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("No connection ID")
+    try:
+        if not params.connection_id:
+            raise jsonrpc.JSONRPCRuntimeError("No connection ID")
 
-    if glonax_peer_connection is None:
-        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
+        if glonax_peer_connection is None:
+            raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
 
-    if params.connection_id != glonax_peer_connection.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError(
-            f"Invalid connection ID {params.connection_id}, current connection ID {glonax_peer_connection.connection_id}"
+        if params.connection_id != glonax_peer_connection.connection_id:
+            raise jsonrpc.JSONRPCRuntimeError(
+                f"Invalid connection ID {params.connection_id}, current connection ID {glonax_peer_connection.connection_id}"
+            )
+
+        if not candidate_inc.candidate:
+            raise jsonrpc.JSONRPCRuntimeError("No ICE candidate")
+
+        logger.info(
+            f"Updating RTC connection {params.connection_id} with ICE candidate"
         )
 
-    if not candidate_inc.candidate:
-        raise jsonrpc.JSONRPCRuntimeError("No ICE candidate")
+        sdp = candidate_inc.candidate.replace("candidate:", "")
+        candidate = Candidate.from_sdp(sdp)
 
-    logger.info(f"Updating RTC connection {params.connection_id} with ICE candidate")
+        candidate = candidate_from_aioice(candidate)
+        candidate.sdpMid = candidate_inc.sdpMid
+        candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
 
-    sdp = candidate_inc.candidate.replace("candidate:", "")
-    candidate = Candidate.from_sdp(sdp)
+        await glonax_peer_connection.add_ice_candidate(candidate)
 
-    candidate = candidate_from_aioice(candidate)
-    candidate.sdpMid = candidate_inc.sdpMid
-    candidate.sdpMLineIndex = candidate_inc.sdpMLineIndex
-
-    await glonax_peer_connection.add_ice_candidate(candidate)
+    except Exception as e:
+        logger.error(f"Error updating RTC connection: {e}")
+        raise jsonrpc.JSONRPCRuntimeError("Error updating RTC connection")
 
 
 @dispatcher.rpc_call
 async def disconnect_rtc(params: GlonaxPeerConnectionParams):
     global glonax_peer_connection
 
-    if not params.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+    try:
+        if not params.connection_id:
+            raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
-    if glonax_peer_connection is None:
-        raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
+        if glonax_peer_connection is None:
+            raise jsonrpc.JSONRPCRuntimeError("No RTC connection established")
 
-    if params.connection_id != glonax_peer_connection.connection_id:
-        raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
+        if params.connection_id != glonax_peer_connection.connection_id:
+            raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
 
-    logger.info("Disconnecting RPC")
+        logger.info("Disconnecting RPC")
 
-    if glonax_peer_connection is not None:
-        await glonax_peer_connection._stop()
-        glonax_peer_connection = None
+        if glonax_peer_connection is not None:
+            await glonax_peer_connection._stop()
+            glonax_peer_connection = None
+
+    except Exception as e:
+        logger.error(f"Error disconnecting RTC connection: {e}")
+        raise jsonrpc.JSONRPCRuntimeError("Error disconnecting RTC connection")
 
 
 @dispatcher.rpc_call
