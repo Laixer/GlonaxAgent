@@ -360,7 +360,7 @@ async def websocket():
     logger.info("Starting websocket task")
 
     base_url = config["control"]["base_url"].rstrip("/")
-    uri = f"{base_url}/{config["instance_id"]}/ws"
+    uri = f"{base_url}/{config["DEFAULT"]["instance_id"]}/ws"
 
     while True:
         try:
@@ -387,26 +387,27 @@ async def websocket():
         except ConnectionRefusedError:
             logger.error("Websocket connection refused")
         except Exception as e:
-            logger.critical(f"Unknown error: {traceback.format_exc()}")
+            logger.error(f"Websocket error: {e}")
+            # logger.critical(f"Unknown error: {traceback.format_exc()}")
 
         logger.info("Reconnecting websocket...")
         await asyncio.sleep(1)
 
 
-async def fetch_instance(path, file_name: str) -> Instance | None:
-    import os
-    import pickle
+# async def fetch_instance(path, file_name: str) -> Instance | None:
+#     import os
+#     import pickle
 
-    if os.path.exists(file_name):
-        with open(file_name, "rb") as file:
-            return pickle.load(file)
-    else:
-        # TODO: Replace this with a command
-        user_agent = "glonax-agent/1.0"
-        async with await gclient.open_session(path, user_agent=user_agent) as session:
-            with open(file_name, "wb") as file:
-                pickle.dump(session.instance, file)
-            return session.instance
+#     if os.path.exists(file_name):
+#         with open(file_name, "rb") as file:
+#             return pickle.load(file)
+#     else:
+#         # TODO: Replace this with a command
+#         user_agent = "glonax-agent/1.0"
+#         async with await gclient.open_session(path, user_agent=user_agent) as session:
+#             with open(file_name, "wb") as file:
+#                 pickle.dump(session.instance, file)
+#             return session.instance
 
 
 async def main():
@@ -516,11 +517,11 @@ if __name__ == "__main__":
         default=UNIX_SOCKET,
         help="Specify the UNIX socket path to use",
     )
-    parser.add_argument(
-        "--cache",
-        default="cache.db",
-        help="Specify the cache file to use",
-    )
+    # parser.add_argument(
+    #     "--cache",
+    #     default="cache.db",
+    #     help="Specify the cache file to use",
+    # )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
@@ -531,9 +532,13 @@ if __name__ == "__main__":
     else:
         logger.addHandler(ColorLogHandler())
 
+    if args.instance is None:
+        print("Instance ID is required")
+        exit(1)
+
     config.read(args.config)
-    config["DEFAULT"]["cache"] = args.cache
+    # config["DEFAULT"]["cache"] = args.cache
+    config["DEFAULT"]["instance_id"] = args.instance
     config["glonax"]["unix_socket"] = args.socket
-    config["instance_id"] = args.instance
 
     asyncio.run(main())
