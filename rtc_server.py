@@ -213,10 +213,10 @@ async def setup_rtc(
     secret = config["auth"]["secret"]
 
     # Simulate authentication delay
-    time.sleep(0.5)
+    time.sleep(0.2)
 
     if not pbkdf2_sha256.verify(params.auth_token, secret):
-        time.sleep(1)
+        time.sleep(2)
         raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
     if not params.connection_id:
@@ -348,15 +348,13 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
 #     else:
 #         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
-
+# TODO: Do we need this?
 @dispatcher.rpc_call
 def echo(input):
     return input
 
 
 async def websocket():
-    # global glonax_agent
-
     logger.info("Starting websocket task")
 
     base_url = config["control"]["base_url"].rstrip("/")
