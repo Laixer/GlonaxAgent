@@ -166,7 +166,7 @@ class GlonaxPeerConnection:
             await self._peer_connection.close()
 
     async def _on_disconnect(self) -> None:
-        global glonax_agent, glonax_peer_connection
+        global glonax_peer_connection
 
         try:
             logger.info(f"RTC connection {self._connection_id} disconnecting")
@@ -482,9 +482,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Glonax agent for the Laixer Edge platform"
-    )
+    parser = argparse.ArgumentParser(description="Glonax RTC proxy")
     parser.add_argument(
         "-l",
         "--log-level",
