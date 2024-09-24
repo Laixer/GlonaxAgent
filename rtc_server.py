@@ -43,7 +43,7 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 instance_id = os.getenv("GLONAX_INSTANCE_ID")
-glonax_agent: GlonaxAgent | None = None
+# glonax_agent: GlonaxAgent | None = None
 
 glonax_peer_connection = None
 media_video0 = None
@@ -355,12 +355,12 @@ def echo(input):
 
 
 async def websocket():
-    global glonax_agent
+    # global glonax_agent
 
     logger.info("Starting websocket task")
 
     base_url = config["control"]["base_url"].rstrip("/")
-    uri = f"{base_url}/{config["instance"]["id"]}/ws"
+    uri = f"{base_url}/{config["instance_id"]}/ws"
 
     while True:
         try:
@@ -412,14 +412,15 @@ async def fetch_instance(path, file_name: str) -> Instance | None:
 async def main():
     # import socketio
 
-    global glonax_agent, glonax_peer_connection, media_video0
+    global glonax_peer_connection, media_video0
+    # global glonax_agent, glonax_peer_connection, media_video0
 
     # TODO: Return instance from config
     # TODO: Remove cache file
-    instance = await fetch_instance(
-        config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
-    )
-    glonax_agent = GlonaxAgent(config, instance)
+    # instance = await fetch_instance(
+    #     config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
+    # )
+    # glonax_agent = GlonaxAgent(config, instance)
 
     logger.info(f"Starting {APP_NAME}")
 
@@ -504,6 +505,12 @@ if __name__ == "__main__":
         help="Specify the configuration file to use",
     )
     parser.add_argument(
+        "-i",
+        "--instance",
+        default=instance_id,
+        help="Specify the instance ID to use",
+    )
+    parser.add_argument(
         "-s",
         "--socket",
         default=UNIX_SOCKET,
@@ -527,6 +534,6 @@ if __name__ == "__main__":
     config.read(args.config)
     config["DEFAULT"]["cache"] = args.cache
     config["glonax"]["unix_socket"] = args.socket
-    config["instance"]["id"] = instance_id
+    config["instance_id"] = args.instance
 
     asyncio.run(main())
