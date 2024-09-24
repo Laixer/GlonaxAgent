@@ -190,7 +190,7 @@ class GlonaxPeerConnection:
             glonax_peer_connection = None
             logger.info(f"RTC connection {self._connection_id} disconnected")
 
-    async def _stop(self) -> None:
+    async def stop(self) -> None:
         if self._peer_connection is not None:
             await self._peer_connection.close()
 
@@ -298,7 +298,7 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
         logger.info("Disconnecting RPC")
 
         if glonax_peer_connection is not None:
-            await glonax_peer_connection._stop()
+            await glonax_peer_connection.stop()
             glonax_peer_connection = None
 
     except Exception as e:
@@ -473,7 +473,7 @@ async def main():
 
     except asyncio.CancelledError:
         if glonax_peer_connection is not None:
-            await glonax_peer_connection._stop()
+            await glonax_peer_connection.stop()
         if media_video0 is not None:
             media_video0._stop(media_video0.video)
             media_video0 = None
