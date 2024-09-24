@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import time
 import logging
 import configparser
@@ -41,6 +42,7 @@ VIDEO_SIZES = ["1920x1080", "1280x720", "640x480", "320x240"]
 config = configparser.ConfigParser()
 logger = logging.getLogger()
 
+instance_id = os.getenv("GLONAX_INSTANCE_ID")
 glonax_agent: GlonaxAgent | None = None
 
 glonax_peer_connection = None
@@ -357,8 +359,8 @@ async def websocket():
 
     logger.info("Starting websocket task")
 
-    base_url = (config["control"]["base_url"]).rstrip("/")
-    uri = f"{base_url}/{glonax_agent.instance.id}/ws"
+    base_url = config["control"]["base_url"].rstrip("/")
+    uri = f"{base_url}/{config["instance"]["id"]}/ws"
 
     while True:
         try:
@@ -525,5 +527,6 @@ if __name__ == "__main__":
     config.read(args.config)
     config["DEFAULT"]["cache"] = args.cache
     config["glonax"]["unix_socket"] = args.socket
+    config["instance"]["id"] = instance_id
 
     asyncio.run(main())
