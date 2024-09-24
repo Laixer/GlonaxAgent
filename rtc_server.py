@@ -52,30 +52,30 @@ class GlonaxPeerConnection:
         self._socket_path = socket_path
         self._user_agent = params.user_agent[:32]
 
-        self.__peer_connection = RTCPeerConnection()
+        self._peer_connection = RTCPeerConnection()
         self._glonax_session = None
         self._task = None
         self._task_monitor = None
 
         if isinstance(media_video0, MediaPlayer):
             video = media_relay.subscribe(media_video0.video, buffered=False)
-            self.__peer_connection.addTrack(video)
+            self._peer_connection.addTrack(video)
         else:
             logger.error("No video device available")
 
-        @self.__peer_connection.on("connectionstatechange")
+        @self._peer_connection.on("connectionstatechange")
         async def on_connectionstatechange():
             logger.info(
-                "Connection state is %s" % self.__peer_connection.connectionState
+                "Connection state is %s" % self._peer_connection.connectionState
             )
-            if self.__peer_connection.connectionState == "failed":
-                await self.__peer_connection.close()
-            elif self.__peer_connection.connectionState == "connected":
+            if self._peer_connection.connectionState == "failed":
+                await self._peer_connection.close()
+            elif self._peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
-            elif self.__peer_connection.connectionState == "closed":
+            elif self._peer_connection.connectionState == "closed":
                 await self._on_disconnect()
 
-        @self.__peer_connection.on("datachannel")
+        @self._peer_connection.on("datachannel")
         async def on_datachannel(channel):
             if channel.label == "signal":
                 if self._task is None and self._glonax_session is None:
@@ -97,16 +97,16 @@ class GlonaxPeerConnection:
         return self._connection_id
 
     async def set_remote_description(self, offer: RTCSessionDescription) -> None:
-        await self.__peer_connection.setRemoteDescription(offer)
+        await self._peer_connection.setRemoteDescription(offer)
 
     async def create_answer(self) -> RTCSessionDescription:
-        answer = await self.__peer_connection.createAnswer()
-        await self.__peer_connection.setLocalDescription(answer)
+        answer = await self._peer_connection.createAnswer()
+        await self._peer_connection.setLocalDescription(answer)
         self._task_monitor = asyncio.create_task(self._monitor())
-        return self.__peer_connection.localDescription
+        return self._peer_connection.localDescription
 
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
-        await self.__peer_connection.addIceCandidate(candidate)
+        await self._peer_connection.addIceCandidate(candidate)
 
     async def _run_glonax_read(self, channel):
         while True:
@@ -147,9 +147,9 @@ class GlonaxPeerConnection:
     async def _monitor(self):
         await asyncio.sleep(60)
 
-        if self.__peer_connection.connectionState != "connected":
+        if self._peer_connection.connectionState != "connected":
             logger.info(f"RTC connection {self._connection_id} timed out")
-            await self.__peer_connection.close()
+            await self._peer_connection.close()
 
     async def _on_disconnect(self) -> None:
         global glonax_agent, glonax_peer_connection
@@ -168,8 +168,8 @@ class GlonaxPeerConnection:
                 await self._glonax_session.close()
                 self._glonax_session = None
 
-            if self.__peer_connection is not None:
-                self.__peer_connection = None
+            if self._peer_connection is not None:
+                self._peer_connection = None
         except Exception as e:
             logger.error(f"Error stopping peer connection: {e}")
         finally:
@@ -177,8 +177,8 @@ class GlonaxPeerConnection:
             logger.info(f"RTC connection {self._connection_id} disconnected")
 
     async def _stop(self) -> None:
-        if self.__peer_connection is not None:
-            await self.__peer_connection.close()
+        if self._peer_connection is not None:
+            await self._peer_connection.close()
 
 
 # TODO: Add roles to the RPC calls
