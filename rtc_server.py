@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import logging
 import configparser
 import argparse
@@ -56,9 +57,11 @@ class GlonaxPeerConnection:
         self.__task = None
         self._task_monitor = None
 
-        video = media_relay.subscribe(media_video0.video, buffered=False)
-
-        self.__peer_connection.addTrack(video)
+        if isinstance(media_video0, MediaPlayer):
+            video = media_relay.subscribe(media_video0.video, buffered=False)
+            self.__peer_connection.addTrack(video)
+        else:
+            logger.error("No video device available")
 
         @self.__peer_connection.on("connectionstatechange")
         async def on_connectionstatechange():
@@ -214,7 +217,10 @@ async def setup_rtc(
     path = config["glonax"]["unix_socket"]
     secret = config["auth"]["secret"]
 
+    time.sleep(0.5)
+
     if not pbkdf2_sha256.verify(params.auth_token, secret):
+        time.sleep(1)
         raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
     if not params.connection_id:
