@@ -45,16 +45,16 @@ media_relay = MediaRelay()
 
 class GlonaxPeerConnection:
     def __init__(self, socket_path: str, params: GlonaxPeerConnectionParams):
-        global glonax_agent, media_video0, media_relay
+        global media_video0, media_relay
 
         self._connection_id = params.connection_id
 
-        self.__socket_path = socket_path
-        self.__user_agent = params.user_agent
+        self._socket_path = socket_path
+        self._user_agent = params.user_agent[:32]
 
         self.__peer_connection = RTCPeerConnection()
-        self.__glonax_session = None
-        self.__task = None
+        self._glonax_session = None
+        self._task = None
         self._task_monitor = None
 
         if isinstance(media_video0, MediaPlayer):
@@ -72,18 +72,14 @@ class GlonaxPeerConnection:
                 await self.__peer_connection.close()
             elif self.__peer_connection.connectionState == "connected":
                 logger.info(f"RTC connection {self._connection_id} established")
-
-                await glonax_agent._notify(
-                    "RTC.CONNECTED", f"RTC connection {self._connection_id} established"
-                )
             elif self.__peer_connection.connectionState == "closed":
                 await self._on_disconnect()
 
         @self.__peer_connection.on("datachannel")
         async def on_datachannel(channel):
             if channel.label == "signal":
-                if self.__task is None and self.__glonax_session is None:
-                    self.__task = asyncio.create_task(self.__run_glonax_read(channel))
+                if self._task is None and self._glonax_session is None:
+                    self._task = asyncio.create_task(self._run_glonax_read(channel))
 
             @channel.on("message")
             async def on_message(message):
@@ -91,26 +87,14 @@ class GlonaxPeerConnection:
                     frame = gclient.Frame.from_bytes(message[:10])
                     if frame.type == gclient.MessageType.ECHO:
                         channel.send(message)
-                    elif self.__glonax_session is not None:
-                        await self.__glonax_session.writer.write_frame(
+                    elif self._glonax_session is not None:
+                        await self._glonax_session.writer.write_frame(
                             frame, message[10:]
                         )
 
     @property
     def connection_id(self) -> int:
         return self._connection_id
-
-    @property
-    def user_agent(self) -> str:
-        return self.__user_agent
-
-    @property
-    def socket_path(self) -> str:
-        return self.__socket_path
-
-    @property
-    def video_track(self) -> str:
-        return self.__video_track
 
     async def set_remote_description(self, offer: RTCSessionDescription) -> None:
         await self.__peer_connection.setRemoteDescription(offer)
@@ -124,17 +108,17 @@ class GlonaxPeerConnection:
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
         await self.__peer_connection.addIceCandidate(candidate)
 
-    async def __run_glonax_read(self, channel):
+    async def _run_glonax_read(self, channel):
         while True:
             try:
-                logger.debug("Connecting to glonax at %s", self.__socket_path)
+                logger.debug("Connecting to glonax at %s", self._socket_path)
 
-                self.__glonax_session = await gclient.open_session(
-                    self.__socket_path, user_agent=self.__user_agent
+                self._glonax_session = await gclient.open_session(
+                    self._socket_path, user_agent=self._user_agent
                 )
-                await self.__glonax_session.motion_stop_all()
+                await self._glonax_session.motion_stop_all()
 
-                instance_bytes = self.__glonax_session.instance.to_bytes()
+                instance_bytes = self._glonax_session.instance.to_bytes()
                 frame = gclient.Frame(
                     type=gclient.MessageType.INSTANCE,
                     message_length=len(instance_bytes),
@@ -142,7 +126,7 @@ class GlonaxPeerConnection:
                 channel.send(frame.to_bytes() + instance_bytes)
 
                 while True:
-                    frame, message = await self.__glonax_session.reader.read_frame()
+                    frame, message = await self._glonax_session.reader.read_frame()
                     channel.send(frame.to_bytes() + message)
 
             except asyncio.CancelledError:
@@ -176,13 +160,13 @@ class GlonaxPeerConnection:
             if self._task_monitor is not None:
                 self._task_monitor.cancel()
                 self._task_monitor = None
-            if self.__task is not None:
-                self.__task.cancel()
-                self.__task = None
-            if self.__glonax_session is not None:
-                await self.__glonax_session.motion_stop_all()
-                await self.__glonax_session.close()
-                self.__glonax_session = None
+            if self._task is not None:
+                self._task.cancel()
+                self._task = None
+            if self._glonax_session is not None:
+                await self._glonax_session.motion_stop_all()
+                await self._glonax_session.close()
+                self._glonax_session = None
 
             if self.__peer_connection is not None:
                 self.__peer_connection = None
@@ -190,12 +174,7 @@ class GlonaxPeerConnection:
             logger.error(f"Error stopping peer connection: {e}")
         finally:
             glonax_peer_connection = None
-
             logger.info(f"RTC connection {self._connection_id} disconnected")
-
-            await glonax_agent._notify(
-                "RTC.DISCONNECTED", f"RTC connection {self._connection_id} disconnected"
-            )
 
     async def _stop(self) -> None:
         if self.__peer_connection is not None:
@@ -314,7 +293,7 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
 
 @dispatcher.rpc_call
 async def reboot():
-    global glonax_agent
+    # global glonax_agent
 
     if await System.is_sudo():
         logger.info("Rebooting system")
@@ -428,7 +407,7 @@ async def main():
     logger.info(f"Starting {APP_NAME}")
 
     try:
-        await glonax_agent._boot()
+        # await glonax_agent._boot()
 
         glonax_agent.media_service.add_source(config["camera0"])
 
