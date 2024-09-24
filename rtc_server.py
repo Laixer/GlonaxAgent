@@ -11,7 +11,12 @@ import websockets
 from systemd import journal
 from log import ColorLogHandler
 from aioice import Candidate
-from aiortc import RTCPeerConnection, RTCSessionDescription, InvalidStateError
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCDataChannel,
+    InvalidStateError,
+)
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 from aiortc.rtcicetransport import candidate_from_aioice
@@ -76,21 +81,29 @@ class GlonaxPeerConnection:
                 await self._on_disconnect()
 
         @self._peer_connection.on("datachannel")
-        async def on_datachannel(channel):
+        async def on_datachannel(channel: RTCDataChannel):
             if channel.label == "signal":
                 if self._task is None and self._glonax_session is None:
                     self._task = asyncio.create_task(self._run_glonax_read(channel))
 
             @channel.on("message")
             async def on_message(message):
-                if channel.label == "command":
-                    frame = gclient.Frame.from_bytes(message[:10])
-                    if frame.type == gclient.MessageType.ECHO:
-                        channel.send(message)
-                    elif self._glonax_session is not None:
-                        await self._glonax_session.writer.write_frame(
-                            frame, message[10:]
-                        )
+                match channel.label:
+                    case "command":
+                        frame = gclient.Frame.from_bytes(message[:10])
+                        if frame.type == gclient.MessageType.ECHO:
+                            channel.send(message)
+                        elif self._glonax_session is not None:
+                            await self._glonax_session.writer.write_frame(
+                                frame, message[10:]
+                            )
+
+                    case "rtc":
+                        # TODO: Handle RTC (JSON) messages
+                        # - switch media source
+                        # - switch video size
+                        # - switch video frame rate
+                        pass
 
     @property
     def connection_id(self) -> int:
@@ -108,7 +121,7 @@ class GlonaxPeerConnection:
     async def add_ice_candidate(self, candidate: RTCIceCandidate) -> None:
         await self._peer_connection.addIceCandidate(candidate)
 
-    async def _run_glonax_read(self, channel):
+    async def _run_glonax_read(self, channel: RTCDataChannel):
         while True:
             try:
                 logger.debug("Connecting to glonax at %s", self._socket_path)
@@ -127,6 +140,7 @@ class GlonaxPeerConnection:
 
                 while True:
                     frame, message = await self._glonax_session.reader.read_frame()
+                    # TODO: Deduplicate messages
                     channel.send(frame.to_bytes() + message)
 
             except asyncio.CancelledError:
@@ -196,6 +210,7 @@ async def setup_rtc(
     path = config["glonax"]["unix_socket"]
     secret = config["auth"]["secret"]
 
+    # Simulate authentication delay
     time.sleep(0.5)
 
     if not pbkdf2_sha256.verify(params.auth_token, secret):
@@ -291,17 +306,15 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
         raise jsonrpc.JSONRPCRuntimeError("Error disconnecting RTC connection")
 
 
-@dispatcher.rpc_call
-async def reboot():
-    # global glonax_agent
+# @dispatcher.rpc_call
+# async def reboot():
+#     if await System.is_sudo():
+#         logger.info("Rebooting system")
 
-    if await System.is_sudo():
-        logger.info("Rebooting system")
-
-        # await glonax_agent._notify("RTC.COMMAND.REBOOT", "Command system reboot")
-        await System.reboot()
-    else:
-        raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
+#         # await glonax_agent._notify("RTC.COMMAND.REBOOT", "Command system reboot")
+#         await System.reboot()
+#     else:
+#         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
 
 # @dispatcher.rpc_call
@@ -399,6 +412,8 @@ async def main():
 
     global glonax_agent, glonax_peer_connection, media_video0
 
+    # TODO: Return instance from config
+    # TODO: Remove cache file
     instance = await fetch_instance(
         config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
     )
@@ -409,7 +424,7 @@ async def main():
     try:
         # await glonax_agent._boot()
 
-        glonax_agent.media_service.add_source(config["camera0"])
+        # glonax_agent.media_service.add_source(config["camera0"])
 
         # TODO: Create a service for the video device
         try:
