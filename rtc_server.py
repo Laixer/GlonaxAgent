@@ -107,6 +107,10 @@ class GlonaxPeerConnection:
                         # - switch video frame rate
                         pass
 
+                    case "management":
+                        # TODO: Handle management (JSON) messages
+                        pass
+
     @property
     def connection_id(self) -> int:
         return self._connection_id
@@ -155,6 +159,7 @@ class GlonaxPeerConnection:
                 logger.debug(f"Glonax connection error: {e}")
                 logger.error("Glonax is not running")
             except Exception as e:
+                logger.error(f"Glonax error: {e}")
                 logger.critical(f"Unknown error: {traceback.format_exc()}")
 
             logger.info("Reconnecting to glonax...")
@@ -186,6 +191,7 @@ class GlonaxPeerConnection:
 
             if self._peer_connection is not None:
                 self._peer_connection = None
+
         except Exception as e:
             logger.error(f"Error stopping peer connection: {e}")
         finally:
