@@ -37,9 +37,11 @@ class GlonaxAgent:
         )
 
     async def _boot(self):
-        ip = await self.management_service.remote_ip()
-        self.logger.info(f"Remote address: {ip}")
-        self.network_service.set_remote_addr(ip)
+        pass
+        # ip = await self.management_service.remote_ip()
+        # self.logger.info(f"Remote address: {ip}")
+        # self.network_service.set_remote_addr(ip)
 
     async def _notify(self, topic: str, message: str):
-        await self.management_service.notify(topic, message)
+        pass
+        # await self.management_service.notify(topic, message)
