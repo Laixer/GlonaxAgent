@@ -354,6 +354,7 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
 #     else:
 #         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
+
 # TODO: Do we need this?
 @dispatcher.rpc_call
 def echo(input):
@@ -364,7 +365,8 @@ async def websocket():
     logger.info("Starting websocket task")
 
     base_url = config["control"]["base_url"].rstrip("/")
-    uri = f"{base_url}/{config["DEFAULT"]["instance_id"]}/ws"
+    instance_id = config["DEFAULT"]["instance_id"]
+    uri = f"{base_url}/{instance_id}/ws"
 
     while True:
         try:
