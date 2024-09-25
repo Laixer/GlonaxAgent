@@ -213,7 +213,6 @@ async def setup_rtc(
     global glonax_peer_connection
 
     path = config["glonax"]["unix_socket"]
-    # secret = auth_secret
 
     # Simulate authentication delay
     time.sleep(0.2)
@@ -253,6 +252,8 @@ async def update_rtc(
 ) -> str:
     global glonax_peer_connection
 
+    # TODO: Check authentication token
+
     if not params.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("No connection ID")
 
@@ -289,6 +290,8 @@ async def update_rtc(
 @dispatcher.rpc_call
 async def disconnect_rtc(params: GlonaxPeerConnectionParams):
     global glonax_peer_connection
+
+    # TODO: Check authentication token
 
     if not params.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
