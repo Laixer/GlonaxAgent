@@ -250,9 +250,14 @@ async def setup_rtc(
 async def update_rtc(
     params: GlonaxPeerConnectionParams, candidate_inc: RTCIceCandidateParams
 ) -> str:
+    from passlib.hash import pbkdf2_sha256
+
     global glonax_peer_connection
 
     # TODO: Check authentication token
+    # if not pbkdf2_sha256.verify(params.auth_token, auth_secret):
+    #     time.sleep(2)
+    #     raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
     if not params.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("No connection ID")
@@ -289,9 +294,14 @@ async def update_rtc(
 
 @dispatcher.rpc_call
 async def disconnect_rtc(params: GlonaxPeerConnectionParams):
+    from passlib.hash import pbkdf2_sha256
+
     global glonax_peer_connection
 
     # TODO: Check authentication token
+    # if not pbkdf2_sha256.verify(params.auth_token, auth_secret):
+    #     time.sleep(2)
+    #     raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
     if not params.connection_id:
         raise jsonrpc.JSONRPCRuntimeError("Invalid connection ID")
