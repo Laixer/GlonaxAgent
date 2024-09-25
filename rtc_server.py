@@ -24,13 +24,10 @@ from aiortc.rtcicetransport import candidate_from_aioice
 from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from glonax import client as gclient
-from glonax_agent import GlonaxAgent
 from glonax_agent.models import (
     GlonaxPeerConnectionParams,
     RTCIceCandidateParams,
 )
-from glonax.message import Instance
-from glonax_agent.system import System
 import glonax_agent.jsonrpc as jsonrpc
 
 APP_NAME = "glonax-rtc"
@@ -43,7 +40,6 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 instance_id = os.getenv("GLONAX_INSTANCE_ID")
-# glonax_agent: GlonaxAgent | None = None
 
 glonax_peer_connection = None
 media_video0 = None
@@ -355,12 +351,6 @@ async def disconnect_rtc(params: GlonaxPeerConnectionParams):
 #         raise jsonrpc.JSONRPCRuntimeError("User does not have sudo privileges")
 
 
-# TODO: Do we need this?
-@dispatcher.rpc_call
-def echo(input):
-    return input
-
-
 async def websocket():
     logger.info("Starting websocket task")
 
@@ -400,40 +390,14 @@ async def websocket():
         await asyncio.sleep(1)
 
 
-# async def fetch_instance(path, file_name: str) -> Instance | None:
-#     import os
-#     import pickle
-
-#     if os.path.exists(file_name):
-#         with open(file_name, "rb") as file:
-#             return pickle.load(file)
-#     else:
-#         # TODO: Replace this with a command
-#         user_agent = "glonax-agent/1.0"
-#         async with await gclient.open_session(path, user_agent=user_agent) as session:
-#             with open(file_name, "wb") as file:
-#                 pickle.dump(session.instance, file)
-#             return session.instance
-
-
 async def main():
     # import socketio
 
     global glonax_peer_connection, media_video0
-    # global glonax_agent, glonax_peer_connection, media_video0
-
-    # TODO: Return instance from config
-    # TODO: Remove cache file
-    # instance = await fetch_instance(
-    #     config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
-    # )
-    # glonax_agent = GlonaxAgent(config, instance)
 
     logger.info(f"Starting {APP_NAME}")
 
     try:
-        # await glonax_agent._boot()
-
         # glonax_agent.media_service.add_source(config["camera0"])
 
         # TODO: Create a service for the video device
@@ -523,11 +487,6 @@ if __name__ == "__main__":
         default=UNIX_SOCKET,
         help="Specify the UNIX socket path to use",
     )
-    # parser.add_argument(
-    #     "--cache",
-    #     default="cache.db",
-    #     help="Specify the cache file to use",
-    # )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
@@ -543,7 +502,6 @@ if __name__ == "__main__":
         exit(1)
 
     config.read(args.config)
-    # config["DEFAULT"]["cache"] = args.cache
     config["DEFAULT"]["instance_id"] = args.instance
     config["glonax"]["unix_socket"] = args.socket
 
