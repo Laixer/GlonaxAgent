@@ -40,6 +40,7 @@ config = configparser.ConfigParser()
 logger = logging.getLogger()
 
 instance_id = os.getenv("GLONAX_INSTANCE_ID")
+auth_secret = os.getenv("AUTH_SECRET")
 
 glonax_peer_connection = None
 media_video0 = None
@@ -212,12 +213,12 @@ async def setup_rtc(
     global glonax_peer_connection
 
     path = config["glonax"]["unix_socket"]
-    secret = config["auth"]["secret"]
+    # secret = auth_secret
 
     # Simulate authentication delay
     time.sleep(0.2)
 
-    if not pbkdf2_sha256.verify(params.auth_token, secret):
+    if not pbkdf2_sha256.verify(params.auth_token, auth_secret):
         time.sleep(2)
         raise jsonrpc.JSONRPCRuntimeError("Invalid authentication token")
 
