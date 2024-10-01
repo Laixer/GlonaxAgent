@@ -419,11 +419,11 @@ async def main():
             camera0 = config["camera0"]
             device = camera0["device"]
 
-            logger.info(f"Opening video device {device}")
-
             video_size = camera0.get("video_size", "1280x720")
             if video_size not in VIDEO_SIZES:
                 raise ValueError("Invalid video size")
+
+            logger.info(f"Opening video device {device} at {video_size}")
 
             media_video0 = MediaPlayer(
                 device,
