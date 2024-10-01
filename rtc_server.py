@@ -466,7 +466,7 @@ async def main():
             media_video0._stop(media_video0.video)
             media_video0 = None
 
-        logger.info("Agent is gracefully shutting down")
+        logger.info("RTC proxy is gracefully shutting down")
 
 
 if __name__ == "__main__":

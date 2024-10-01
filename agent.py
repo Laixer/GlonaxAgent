@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import logging
 import configparser
 import argparse
@@ -20,45 +21,12 @@ APP_NAME = "glonax-agent"
 config = configparser.ConfigParser()
 logger = logging.getLogger()
 
-glonax_agent: GlonaxAgent | None = None
-
-
-async def update_telemetry():
-    global glonax_agent
-
-    logger.info("Starting telemetry task")
-
-    while True:
-        await asyncio.sleep(15)
-
-        telemetry = glonax_agent.host_service.get_telemetry(glonax_agent.instance)
-        await glonax_agent.management_service.update_host_telemetry(telemetry)
-
-        await asyncio.sleep(5)
-
-        if glonax_agent.location_service.current_location is not None:
-            await glonax_agent.management_service.update_gps_telemetry(
-                glonax_agent.location_service.current_location
-            )
-
-        await asyncio.sleep(15)
-
-        # logger.info(f"Engine: {machine_service.last_engine}")
-        # logger.info(f"Motion: {machine_service.last_motion}")
-
-        # machine_service.last_module_status(module)
-
-        # TODO: Send telemetry last engine and last motion
-        # TODO: Send telemetry module status
-
-        await asyncio.sleep(25)
+instance_id = os.getenv("GLONAX_INSTANCE_ID")
 
 
 async def gps_server():
     from gps import client
     from gps.schemas import TPV
-
-    global glonax_agent
 
     while True:
         try:
@@ -66,7 +34,7 @@ async def gps_server():
                 async for result in c:
                     if isinstance(result, TPV):
                         location = GpsTelemetry(
-                            instance=str(glonax_agent.instance.id),
+                            # instance=str(glonax_agent.instance.id),
                             mode=result.mode,
                             lat=result.lat,
                             lon=result.lon,
@@ -76,7 +44,7 @@ async def gps_server():
                         )
 
                         logger.debug(location)
-                        glonax_agent.location_service.feed(location)
+                        # glonax_agent.location_service.feed(location)
 
         except asyncio.CancelledError:
             logger.info("GPS handler cancelled")
@@ -91,30 +59,7 @@ async def gps_server():
         await asyncio.sleep(1)
 
 
-async def ping_server():
-    host = config["ping"]["host"]
-
-    global glonax_agent
-
-    while True:
-        try:
-            await asyncio.sleep(7)
-
-            latency = await System.ping(host)
-
-            logger.debug(f"Network latency {latency} ms")
-            glonax_agent.network_service.feed_latency(latency)
-
-        except asyncio.CancelledError:
-            logger.info("Ping handler cancelled")
-            return
-        except Exception as e:
-            logger.critical(f"Unknown error: {traceback.format_exc()}")
-
-
 async def glonax_server():
-    global glonax_agent
-
     logger.info("Starting glonax task")
 
     path = config["glonax"]["unix_socket"]
@@ -129,8 +74,8 @@ async def glonax_server():
             ) as session:
                 logger.info(f"Glonax connected to {path}")
 
-                async for message in session:
-                    glonax_agent.machine_service.feed(message)
+                # async for message in session:
+                #     glonax_agent.machine_service.feed(message)
 
         except asyncio.CancelledError:
             logger.info("Glonax task cancelled")
@@ -145,51 +90,15 @@ async def glonax_server():
         await asyncio.sleep(1)
 
 
-# TODO: Replace the cache file if the instance is older than 1 day
-async def fetch_instance(path, file_name: str) -> Instance | None:
-    import os
-    import pickle
-
-    if os.path.exists(file_name):
-        with open(file_name, "rb") as file:
-            return pickle.load(file)
-    else:
-        # TODO: Replace this with a command
-        user_agent = "glonax-agent/1.0"
-        async with await gclient.open_session(path, user_agent=user_agent) as session:
-            with open(file_name, "wb") as file:
-                pickle.dump(session.instance, file)
-            return session.instance
-
-
 async def main():
-    global glonax_agent
-
-    instance = await fetch_instance(
-        config["glonax"]["unix_socket"], config["DEFAULT"]["cache"]
-    )
-    glonax_agent = GlonaxAgent(config, instance)
-
     logger.info(f"Starting {APP_NAME}")
 
     try:
-        await glonax_agent._boot()
-
-        await glonax_agent._notify(
-            "AGENT.START", f"Agent {glonax_agent.instance.id} started"
-        )
-
         async with asyncio.TaskGroup() as tg:
-            task1 = tg.create_task(glonax_server())
-            task2 = tg.create_task(ping_server())
-            task3 = tg.create_task(gps_server())
-            task4 = tg.create_task(update_telemetry())
+            tg.create_task(glonax_server())
+            tg.create_task(gps_server())
 
     except asyncio.CancelledError:
-        await glonax_agent._notify(
-            "AGENT.SHUTDOWN", f"Agent {glonax_agent.instance.id} shutting down"
-        )
-
         logger.info("Agent is gracefully shutting down")
 
 
@@ -216,10 +125,17 @@ if __name__ == "__main__":
         help="Specify the configuration file to use",
     )
     parser.add_argument(
-        "--cache",
-        default="cache.db",
-        help="Specify the cache file to use",
+        "-i",
+        "--instance",
+        default=instance_id,
+        help="Specify the instance ID to use",
     )
+    # parser.add_argument(
+    #     "-s",
+    #     "--socket",
+    #     default=UNIX_SOCKET,
+    #     help="Specify the UNIX socket path to use",
+    # )
     args = parser.parse_args()
 
     log_level = logging.getLevelName(args.log_level.upper())
@@ -231,6 +147,7 @@ if __name__ == "__main__":
         logger.addHandler(ColorLogHandler())
 
     config.read(args.config)
-    config["DEFAULT"]["cache"] = args.cache
+    config["DEFAULT"]["instance_id"] = args.instance
+    # config["glonax"]["unix_socket"] = args.socket
 
     asyncio.run(main())
